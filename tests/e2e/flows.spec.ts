@@ -123,3 +123,78 @@ test('admin cadastra, edita, desativa e reativa servidor', async ({ page }) => {
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(page.getByRole('heading', { name: /Olá, Servidor E2E Editado/ })).toBeVisible()
 })
+
+test('exibe as datas do seletor em DD/MM/AAAA', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill('ana@example.com')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/agenda$/)
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+
+  const periodInput = page.getByLabel('Início e fim do período 2')
+  await periodInput.fill('10/03/2027 - 19/03/2027')
+  await periodInput.press('Enter')
+  await page.getByRole('heading', { name: 'Período 2' }).click()
+
+  await expect(periodInput).toHaveValue('10/03/2027 - 19/03/2027')
+})
+
+test('abre o primeiro período no início do ciclo quando ainda não há datas', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-28T12:00:00Z') })
+
+  const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+  const headers = { origin: baseURL }
+  const email = `data-inicial-${Date.now()}@example.com`
+
+  const adminLogin = await page.request.post(`${baseURL}/api/admin/auth/login`, {
+    headers,
+    data: { email: 'admin@example.com', password: 'admin12345' },
+  })
+  expect(adminLogin.ok()).toBeTruthy()
+
+  const created = await page.request.post(`${baseURL}/api/admin/employees`, {
+    headers,
+    data: { name: 'Servidor Data Inicial', email },
+  })
+  expect(created.status()).toBe(201)
+
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill(email)
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/agenda$/)
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+
+  const periodInput = page.getByLabel('Início e fim do período 1')
+  await periodInput.click()
+  await expect(page.locator('[data-test-id="dp-2027-01-01"]')).toBeVisible()
+})
+
+test('seleciona um período completo clicando no calendário', async ({ page }) => {
+  await page.clock.install({ time: new Date('2027-01-02T12:00:00Z') })
+
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill('ana@example.com')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/agenda$/)
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+
+  const periodInput = page.getByLabel('Início e fim do período 2')
+  await periodInput.click()
+  await expect(page.locator('[data-test-id="dp-2027-08-04"]')).toBeVisible()
+  await page.locator('[data-test-id="dp-2027-08-04"]').click()
+  await page.locator('[data-test-id="dp-2027-08-13"]').click()
+
+  await expect(periodInput).toHaveValue('04/08/2027 - 13/08/2027')
+
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+  const period3Input = page.getByLabel('Início e fim do período 3')
+  await period3Input.click()
+  await expect(page.locator('[data-test-id="dp-2027-08-29"]')).toBeVisible()
+  await page.locator('[data-test-id="dp-2027-08-29"]').click()
+  await page.locator('[data-test-id="dp-2027-08-31"]').click()
+
+  await expect(period3Input).toHaveValue('29/08/2027 - 31/08/2027')
+})

@@ -91,6 +91,77 @@ export function earliestNextStart(previousEnd: string, minGapDays: number): stri
   return toISODate(addDays(previous, minGapDays + 1))
 }
 
+export function findLastCompletePeriodBefore(periods: VacationPeriod[], index: number): VacationPeriod | null {
+  for (let current = Math.min(index - 1, periods.length - 1); current >= 0; current -= 1) {
+    const period = periods[current]
+    if (period && parsePeriod(period, current)) {
+      return period
+    }
+  }
+
+  return null
+}
+
+export function firstAvailableDateFrom(
+  startDate: string,
+  periods: VacationPeriod[],
+  rules: VacationRules,
+): string | null {
+  const cycleStart = parseISODate(rules.cycleStart)
+  const cycleEnd = parseISODate(rules.cycleEnd)
+  const start = parseISODate(startDate)
+
+  if (!cycleStart || !cycleEnd || !start) {
+    return null
+  }
+
+  let cursor = start < cycleStart ? cycleStart : start
+  if (cursor > cycleEnd) {
+    return null
+  }
+
+  const disabled = new Set(getDisabledDates(periods, rules))
+  while (cursor <= cycleEnd) {
+    const date = toISODate(cursor)
+    if (!disabled.has(date)) {
+      return date
+    }
+    cursor = addDays(cursor, 1)
+  }
+
+  return null
+}
+
+export function suggestedInitialDate(
+  periods: VacationPeriod[],
+  index: number,
+  rules: VacationRules,
+  today = new Date(),
+): string {
+  const cycleStart = parseISODate(rules.cycleStart)
+  const cycleEnd = parseISODate(rules.cycleEnd)
+
+  if (!cycleStart || !cycleEnd) {
+    return ''
+  }
+
+  const currentStart = periods[index] ? parseISODate(periods[index]!.startDate) : null
+  if (currentStart) {
+    return toISODate(currentStart)
+  }
+
+  const previous = findLastCompletePeriodBefore(periods, index)
+  const earliestAfterPrevious = previous
+    ? parseISODate(earliestNextStart(previous.endDate, rules.minGapDays) ?? '')
+    : null
+  const fallback = today < cycleStart ? cycleStart : today
+  const candidate = earliestAfterPrevious ?? fallback
+  const clamped = candidate < cycleStart ? cycleStart : candidate > cycleEnd ? cycleEnd : candidate
+  const otherPeriods = periods.filter((_, currentIndex) => currentIndex !== index)
+
+  return firstAvailableDateFrom(toISODate(clamped), otherPeriods, rules) ?? toISODate(clamped)
+}
+
 export function findOverlaps(periods: VacationPeriod[]): Array<[number, number]> {
   const parsed = periods
     .map((period, index) => parsePeriod(period, index))

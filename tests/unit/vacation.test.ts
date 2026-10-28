@@ -3,13 +3,16 @@ import {
   countDays,
   deriveStatus,
   earliestNextStart,
+  findLastCompletePeriodBefore,
   findOverlaps,
+  firstAvailableDateFrom,
   freeDaysBetween,
   getBlockedGapDates,
   getDisabledDates,
   getOccupiedDates,
   getTotalDays,
   isDateDisabled,
+  suggestedInitialDate,
   validateForConfirmation,
   validatePeriod,
   validateSchedule,
@@ -73,6 +76,75 @@ describe('intervalo mínimo', () => {
     expect(earliestNextStart('2027-03-19', 15)).toBe('2027-04-04')
     expect(earliestNextStart('2027-12-31', 0)).toBe('2028-01-01')
     expect(earliestNextStart('2027-02-30', 15)).toBeNull()
+  })
+})
+
+describe('data inicial sugerida', () => {
+  it('encontra o último período completo anterior', () => {
+    const periods = [
+      period('2027-03-10', '2027-03-19'),
+      period('2027-04-04', ''),
+      period('2027-05-01', '2027-05-10'),
+    ]
+
+    expect(findLastCompletePeriodBefore(periods, 2)).toEqual(period('2027-03-10', '2027-03-19'))
+    expect(findLastCompletePeriodBefore(periods, 0)).toBeNull()
+  })
+
+  it('encontra a primeira data disponível a partir de uma referência', () => {
+    const periods = [
+      period('2027-04-04', '2027-04-13'),
+    ]
+
+    expect(firstAvailableDateFrom('2027-04-04', periods, rules)).toBe('2027-04-29')
+    expect(firstAvailableDateFrom('2027-12-31', [period('2027-12-31', '2027-12-31')], rules)).toBeNull()
+  })
+
+  it('usa a data inicial do período atual quando já existe', () => {
+    const periods = [period('2027-05-10', '2027-05-19')]
+
+    expect(suggestedInitialDate(periods, 0, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-05-10')
+  })
+
+  it('abre no início do ciclo quando hoje é anterior ao ciclo', () => {
+    expect(suggestedInitialDate([], 0, rules, new Date('2026-10-28T12:00:00'))).toBe('2027-01-01')
+  })
+
+  it('usa hoje quando ele está dentro do ciclo', () => {
+    expect(suggestedInitialDate([], 0, rules, new Date('2027-05-10T12:00:00'))).toBe('2027-05-10')
+  })
+
+  it('limita ao fim do ciclo quando hoje é posterior ao ciclo', () => {
+    expect(suggestedInitialDate([], 0, rules, new Date('2028-05-10T12:00:00'))).toBe('2027-12-31')
+  })
+
+  it('sugere a primeira data após o último período completo', () => {
+    const periods = [
+      period('2027-03-10', '2027-03-19'),
+      { startDate: '', endDate: '' },
+    ]
+
+    expect(suggestedInitialDate(periods, 1, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-04-04')
+  })
+
+  it('pula datas ocupadas e intervalos de outros períodos', () => {
+    const periods = [
+      period('2027-04-04', '2027-04-13'),
+      period('2027-03-10', '2027-03-19'),
+      { startDate: '', endDate: '' },
+    ]
+
+    expect(suggestedInitialDate(periods, 2, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-04-29')
+  })
+
+  it('ignora períodos incompletos ao calcular a sugestão', () => {
+    const periods = [
+      period('2027-03-10', '2027-03-19'),
+      { startDate: '2027-04-04', endDate: '' },
+      { startDate: '', endDate: '' },
+    ]
+
+    expect(suggestedInitialDate(periods, 2, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-04-04')
   })
 })
 

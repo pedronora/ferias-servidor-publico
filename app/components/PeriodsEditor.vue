@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PeriodInput } from '~~/shared/schemas/schedule'
-import { countDays, getDisabledDates, type VacationRules } from '~~/shared/rules/vacation'
+import { countDays, getDisabledDates, suggestedInitialDate, type VacationRules } from '~~/shared/rules/vacation'
 
 const periods = defineModel<PeriodInput[]>({ required: true })
 
@@ -39,6 +39,10 @@ function disabledDatesFor(index: number): string[] {
 
 function daysFor(period: PeriodInput): number {
   return period.startDate && period.endDate ? countDays(period.startDate, period.endDate) : 0
+}
+
+function initialDateFor(index: number): string {
+  return suggestedInitialDate(periods.value, index, props.rules)
 }
 </script>
 
@@ -80,6 +84,7 @@ function daysFor(period: PeriodInput): number {
         :model-value="period"
         :label="`Início e fim do período ${index + 1}`"
         :disabled-dates="disabledDatesFor(index)"
+        :initial-date="initialDateFor(index)"
         :min-date="rules.cycleStart"
         :max-date="rules.cycleEnd"
         :disabled="disabled"

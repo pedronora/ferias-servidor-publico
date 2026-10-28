@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import ConfirmDialog from '../../app/components/ConfirmDialog.vue'
 import DateRangePicker from '../../app/components/DateRangePicker.vue'
 import PeriodsEditor from '../../app/components/PeriodsEditor.vue'
@@ -160,7 +160,7 @@ describe('PeriodsEditor', () => {
 describe('DateRangePicker', () => {
   const VueDatePickerStub = defineComponent({
     name: 'VueDatePicker',
-    props: ['modelValue', 'disabledDates', 'minDate', 'maxDate', 'disabled'],
+    props: ['modelValue', 'disabledDates', 'minDate', 'maxDate', 'startDate', 'focusStartDate', 'disabled', 'range', 'formats', 'textInput', 'ariaLabels', 'locale'],
     emits: ['update:modelValue'],
     template: '<div data-test="date-picker" />',
   })
@@ -175,12 +175,13 @@ describe('DateRangePicker', () => {
     vm: { $emit: (event: string, ...args: unknown[]) => void }
   }
 
-  function mountPicker() {
+  function mountPicker(options: { modelValue?: PeriodInput, initialDate?: string } = {}) {
     return mount(DateRangePicker, {
       props: {
         id: 'period-0',
         label: 'Período 1',
-        modelValue: { startDate: '2027-01-10', endDate: '2027-01-19' },
+        modelValue: options.modelValue ?? { startDate: '2027-01-10', endDate: '2027-01-19' },
+        initialDate: options.initialDate ?? '2027-02-04',
         disabledDates: ['2027-02-01', 'data-invalida'],
         minDate: '2027-01-01',
         maxDate: '2027-12-31',
@@ -200,6 +201,12 @@ describe('DateRangePicker', () => {
 
     expect(wrapper.get('label').attributes('for')).toBe('period-0')
     expect(picker.props('disabledDates')).toHaveLength(1)
+    expect(picker.props('startDate')).toEqual(new Date(2027, 0, 10))
+    expect(picker.props('focusStartDate')).toBe(true)
+    expect(picker.props('range')).toEqual({ partialRange: false })
+    expect(picker.props('formats')).toEqual({ input: 'dd/MM/yyyy', preview: 'dd/MM/yyyy' })
+    expect(picker.props('textInput')).toEqual({ format: 'dd/MM/yyyy' })
+    expect(picker.props('ariaLabels')).toEqual({ input: 'Período 1' })
 
     await picker.vm.$emit('update:modelValue', ['2027-03-10', '2027-03-19'])
 
@@ -209,7 +216,34 @@ describe('DateRangePicker', () => {
     })
   })
 
-  it('usa a data inicial como final quando só uma data é escolhida', async () => {
+  it('abre na data inicial sugerida quando o período está vazio', () => {
+    const wrapper = mountPicker({
+      modelValue: { startDate: '', endDate: '' },
+      initialDate: '2027-08-04',
+    })
+    const picker = wrapper.getComponent('[data-test="date-picker"]') as unknown as PickerWrapper
+
+    expect(picker.props('startDate')).toEqual(new Date(2027, 7, 4))
+  })
+
+  it('usa o início do ciclo quando não há data sugerida e hoje é anterior ao ciclo', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-28T12:00:00'))
+
+    try {
+      const wrapper = mountPicker({
+        modelValue: { startDate: '', endDate: '' },
+        initialDate: '',
+      })
+      const picker = wrapper.getComponent('[data-test="date-picker"]') as unknown as PickerWrapper
+
+      expect(picker.props('startDate')).toEqual(new Date(2027, 0, 1))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('mantém a data final vazia enquanto o período está incompleto', async () => {
     const wrapper = mountPicker()
     const picker = wrapper.getComponent('[data-test="date-picker"]') as unknown as PickerWrapper
 
@@ -217,7 +251,20 @@ describe('DateRangePicker', () => {
 
     expect(wrapper.emitted('update:modelValue')?.[0]?.[0]).toEqual({
       startDate: '2027-04-04',
-      endDate: '2027-04-04',
+      endDate: '',
+    })
+  })
+
+  it('completa o período ao receber a segunda data', async () => {
+    const wrapper = mountPicker()
+    const picker = wrapper.getComponent('[data-test="date-picker"]') as unknown as PickerWrapper
+
+    await picker.vm.$emit('update:modelValue', [new Date(2027, 3, 4)])
+    await picker.vm.$emit('update:modelValue', [new Date(2027, 3, 4), new Date(2027, 3, 13)])
+
+    expect(wrapper.emitted('update:modelValue')?.[1]?.[0]).toEqual({
+      startDate: '2027-04-04',
+      endDate: '2027-04-13',
     })
   })
 
