@@ -79,7 +79,14 @@ pnpm exec playwright install chromium
 POSTGRES_PORT=5434 pnpm test:e2e
 ```
 
-Use `POSTGRES_PORT=5434` apenas se a 5432 estiver ocupada no host.
+Use `POSTGRES_PORT=5434` apenas se a 5432 estiver ocupada no host. Se a porta 3000 também estiver em uso pelo ambiente de desenvolvimento, rode o E2E em portas isoladas:
+
+```bash
+APP_PORT=3100 POSTGRES_PORT=5434 \
+NUXT_PUBLIC_APP_URL=http://localhost:3100 \
+E2E_BASE_URL=http://localhost:3100 \
+pnpm test:e2e
+```
 
 ## Admin inicial
 
