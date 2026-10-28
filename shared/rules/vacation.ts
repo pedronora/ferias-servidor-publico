@@ -174,6 +174,51 @@ export function validatePeriod(period: VacationPeriod, rules: VacationRules): Va
   return issues
 }
 
+export function validateStructure(periods: VacationPeriod[]): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+
+  periods.forEach((period, index) => {
+    const start = parseISODate(period.startDate)
+    const end = parseISODate(period.endDate)
+
+    if (!start) {
+      issues.push({
+        code: 'invalid_date',
+        field: 'startDate',
+        periodIndex: index,
+        message: 'Data inicial inválida.',
+      })
+    }
+
+    if (!end) {
+      issues.push({
+        code: 'invalid_date',
+        field: 'endDate',
+        periodIndex: index,
+        message: 'Data final inválida.',
+      })
+    }
+
+    if (start && end && end < start) {
+      issues.push({
+        code: 'end_before_start',
+        periodIndex: index,
+        message: 'A data final não pode ser anterior à data inicial.',
+      })
+    }
+  })
+
+  for (const [first, second] of findOverlaps(periods)) {
+    issues.push({
+      code: 'overlap',
+      periodIndex: second,
+      message: `O período ${second + 1} se sobrepõe ao período ${first + 1}.`,
+    })
+  }
+
+  return issues
+}
+
 export function validateSchedule(periods: VacationPeriod[], rules: VacationRules): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 

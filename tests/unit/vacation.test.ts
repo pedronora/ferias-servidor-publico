@@ -13,6 +13,7 @@ import {
   validateForConfirmation,
   validatePeriod,
   validateSchedule,
+  validateStructure,
   type VacationPeriod,
   type VacationRules,
 } from '../../shared/rules/vacation'
@@ -191,6 +192,36 @@ describe('validação da agenda', () => {
       period('2027-03-19', '2027-03-19'),
     ], rules)
     expect(issues.some(issue => issue.code === 'insufficient_gap')).toBe(false)
+  })
+})
+
+describe('estrutura independente das regras de negócio', () => {
+  it('aceita agenda estruturalmente válida mesmo fora do ciclo', () => {
+    expect(validateStructure([
+      period('2026-12-01', '2026-12-10'),
+      period('2026-12-20', '2026-12-30'),
+    ])).toEqual([])
+  })
+
+  it('rejeita datas inválidas', () => {
+    expect(validateStructure([
+      period('2027-02-30', '2027-03-10'),
+      period('2027-03-10', '2027-13-01'),
+    ])).toEqual([
+      expect.objectContaining({ code: 'invalid_date', field: 'startDate', periodIndex: 0 }),
+      expect.objectContaining({ code: 'invalid_date', field: 'endDate', periodIndex: 1 }),
+    ])
+  })
+
+  it('rejeita fim anterior ao início e sobreposição', () => {
+    expect(validateStructure([
+      period('2027-03-19', '2027-03-10'),
+      period('2027-03-10', '2027-03-19'),
+      period('2027-03-19', '2027-03-28'),
+    ])).toEqual([
+      expect.objectContaining({ code: 'end_before_start', periodIndex: 0 }),
+      expect.objectContaining({ code: 'overlap', periodIndex: 2 }),
+    ])
   })
 })
 
