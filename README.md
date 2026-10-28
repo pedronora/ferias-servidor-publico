@@ -70,7 +70,7 @@ pnpm test:integration
 docker compose -f docker-compose.test.yml down -v
 ```
 
-O banco de teste fica em `localhost:5433`, com database `ferias_test`.
+O banco de teste fica em `localhost:5433`, com database `ferias_test`. O compose de teste usa o projeto `ferias-test` e o E2E usa `ferias-e2e`, isolados do ambiente de desenvolvimento.
 
 Para E2E, instale o navegador uma vez e rode o script, que sobe a stack, aguarda o healthcheck e derruba tudo ao final:
 
@@ -79,7 +79,14 @@ pnpm exec playwright install chromium
 POSTGRES_PORT=5434 pnpm test:e2e
 ```
 
-Use `POSTGRES_PORT=5434` apenas se a 5432 estiver ocupada no host.
+Use `POSTGRES_PORT=5434` apenas se a 5432 estiver ocupada no host. Se a porta 3000 também estiver em uso pelo ambiente de desenvolvimento, rode o E2E em portas isoladas:
+
+```bash
+APP_PORT=3100 POSTGRES_PORT=5434 \
+NUXT_PUBLIC_APP_URL=http://localhost:3100 \
+E2E_BASE_URL=http://localhost:3100 \
+pnpm test:e2e
+```
 
 ## Admin inicial
 
@@ -101,6 +108,29 @@ Com `SEED_DEMO_DATA=true`, o seed também cria três servidores de demonstraçã
 - O PostgreSQL impede fim anterior ao início, status inválido, sobreposição para o mesmo servidor (`EXCLUDE USING gist` com `btree_gist`) e justificativa ausente em override.
 - As regras puras ficam em `shared/rules/vacation.ts` e são reutilizadas pelo servidor e pela interface.
 
+## API
+
+Endpoints principais:
+
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`: sessão do servidor.
+- `GET /api/me/schedule`, `PUT /api/me/schedule`: consulta e salva a agenda em rascunho.
+- `POST /api/me/schedule/confirm`: confirma a agenda com exatamente 30 dias.
+- `POST /api/admin/auth/login`, `POST /api/admin/auth/logout`, `GET /api/admin/auth/session`: sessão do admin.
+- `GET /api/admin/employees`: lista e busca servidores.
+- `GET /api/admin/employees/:id`: detalhe da agenda de um servidor.
+- `PUT /api/admin/employees/:id/schedule`: substitui a agenda inteira, com override opcional.
+- `GET /api/admin/report`: relatório consolidado com coincidências.
+
+As rotas de escrita exigem `Origin` compatível com `NUXT_PUBLIC_APP_URL` (ou `Sec-Fetch-Site` confiável). As sessões ficam em cookies selados `httpOnly`, separados para servidor e admin, com validade de 8 horas.
+
+## Interface
+
+- `/login` e `/agenda`: autenticação do servidor, montagem dos períodos, salvamento de rascunho e confirmação da agenda.
+- `/admin/login`, `/admin` e `/admin/servidores/:id`: autenticação administrativa, busca de servidores e edição da agenda com override justificado.
+- `/admin/relatorio`: consolidado por servidor, coincidências de férias, impressão e exportação CSV.
+- As páginas protegidas usam middleware de sessão; a raiz redireciona para `/agenda` ou `/login` conforme a autenticação.
+- A interface reutiliza as mesmas regras de `shared/rules` e trata os erros estruturados da API.
+
 ## Scripts
 
 ```bash
@@ -115,7 +145,8 @@ pnpm test:nuxt
 pnpm test:coverage
 pnpm test:integration
 pnpm test:e2e
-pnpm db:generatepnpm db:migrate
+pnpm db:generate
+pnpm db:migrate
 pnpm db:seed
 ```
 
@@ -126,6 +157,7 @@ pnpm db:seed
 - `pnpm lint` roda com `--max-warnings 0`.
 - Cobertura mínima global: 80%.
 - Cobertura mínima em `shared/rules`: 100% de linhas e ramos.
+- Páginas e layouts são validados pelos testes E2E; a cobertura automatizada de unidade/componentes foca regras, schemas, utilitários, composables, middleware e componentes.
 - Testes unitários rodam em `TZ=UTC` e `TZ=America/Sao_Paulo`.
 
 ## CI/CD
@@ -163,4 +195,4 @@ docs/      documentação operacional
 
 ## Estado da entrega
 
-A implementação está organizada em cinco etapas (fundação, modelo/regras, API, tela do servidor e admin/relatório). Consulte o histórico de commits e os PRs para acompanhar cada etapa.
+Todas as etapas estão implementadas: fundação e CI/CD, modelo de dados e regras, API e autenticação, telas do servidor e área administrativa com relatório. A suíte cobre regras, schemas, componentes, composables, middleware, integração com PostgreSQL e fluxos E2E de servidor e admin. Consulte o histórico de commits e os PRs para acompanhar cada etapa.

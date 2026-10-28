@@ -27,6 +27,12 @@ export default async function globalSetup(): Promise<void> {
     await migrate(drizzle(pool), {
       migrationsFolder: resolve(process.cwd(), 'drizzle/migrations'),
     })
+
+    await pool.query(
+      `insert into settings (id, cycle_start, cycle_end, total_days, max_periods, min_period_days, min_gap_days)
+       values (1, '2027-01-01', '2027-12-31', 30, 3, 1, 15)
+       on conflict (id) do nothing`,
+    )
   } finally {
     await pool.end()
   }
