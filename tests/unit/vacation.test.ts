@@ -97,13 +97,26 @@ describe('data inicial sugerida', () => {
     ]
 
     expect(firstAvailableDateFrom('2027-04-04', periods, rules)).toBe('2027-04-29')
+    expect(firstAvailableDateFrom('2026-12-01', [], rules)).toBe('2027-01-01')
     expect(firstAvailableDateFrom('2027-12-31', [period('2027-12-31', '2027-12-31')], rules)).toBeNull()
+  })
+
+  it('retorna nulo para referência ou ciclo inválido', () => {
+    expect(firstAvailableDateFrom('2027-02-30', [], rules)).toBeNull()
+    expect(firstAvailableDateFrom('2027-03-10', [], { ...rules, cycleStart: 'inválida' })).toBeNull()
+    expect(firstAvailableDateFrom('2027-03-10', [], { ...rules, cycleEnd: 'inválida' })).toBeNull()
+    expect(firstAvailableDateFrom('2028-01-01', [], rules)).toBeNull()
   })
 
   it('usa a data inicial do período atual quando já existe', () => {
     const periods = [period('2027-05-10', '2027-05-19')]
 
     expect(suggestedInitialDate(periods, 0, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-05-10')
+  })
+
+  it('retorna vazio quando o ciclo é inválido', () => {
+    expect(suggestedInitialDate([], 0, { ...rules, cycleStart: 'inválida' })).toBe('')
+    expect(suggestedInitialDate([], 0, { ...rules, cycleEnd: 'inválida' })).toBe('')
   })
 
   it('abre no início do ciclo quando hoje é anterior ao ciclo', () => {
@@ -145,6 +158,29 @@ describe('data inicial sugerida', () => {
     ]
 
     expect(suggestedInitialDate(periods, 2, rules, new Date('2027-01-02T12:00:00'))).toBe('2027-04-04')
+  })
+
+  it('limita ao início do ciclo quando o período anterior está fora dele', () => {
+    const periods = [
+      period('2026-12-01', '2026-12-10'),
+      { startDate: '', endDate: '' },
+    ]
+
+    expect(suggestedInitialDate(periods, 1, rules, new Date('2026-10-28T12:00:00'))).toBe('2027-01-01')
+  })
+
+  it('mantém a data sugerida quando não há mais datas disponíveis no ciclo', () => {
+    const shortRules: VacationRules = {
+      ...rules,
+      cycleStart: '2027-01-01',
+      cycleEnd: '2027-01-03',
+    }
+    const periods = [
+      period('2027-01-01', '2027-01-03'),
+      { startDate: '', endDate: '' },
+    ]
+
+    expect(suggestedInitialDate(periods, 1, shortRules, new Date('2026-10-28T12:00:00'))).toBe('2027-01-03')
   })
 })
 
