@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ferias
+      POSTGRES_PASSWORD: ferias_dev_password
+      POSTGRES_DB: ferias
+    ports:
+      - '5432:5432'
+    volumes:
+      - ferias_dev_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ferias -d ferias']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: node:24.19-alpine
+    working_dir: /app
+    init: true
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://ferias:ferias_dev_password@db:5432/ferias
+      NUXT_SESSION_SECRET: dev-only-session-secret-change-me-1234567890
+      NUXT_PUBLIC_APP_URL: http://localhost:3000
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin12345
+      SEED_DEMO_DATA: 'true'
+      TZ: America/Sao_Paulo
+    command: sh -c "corepack enable && corepack prepare pnpm@11.22.0 --activate && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm db:seed && pnpm dev --host 0.0.0.0"
+    volumes:
+      - .:/app
+      - ferias_dev_node_modules:/app/node_modules
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  ferias_dev_db_data:
+  ferias_dev_node_modules:
