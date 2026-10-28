@@ -70,7 +70,7 @@ export default withNuxt(
     rules: {
       'vitest/no-focused-tests': 'error',
       'vitest/no-disabled-tests': 'error',
-      'vitest/expect-expect': 'error',
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'expectDatabaseError'] }],
       'vitest/valid-title': 'error',
     },
   },
