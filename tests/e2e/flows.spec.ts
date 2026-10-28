@@ -78,3 +78,48 @@ test('admin consulta servidores, abre agenda e gera relatório com CSV', async (
 
   expect(download.suggestedFilename()).toMatch(/^relatorio-ferias-\d{4}-\d{2}-\d{2}\.csv$/)
 })
+
+test('admin cadastra, edita, desativa e reativa servidor', async ({ page }) => {
+  await page.goto('/admin/login')
+  await page.getByLabel('E-mail').fill('admin@example.com')
+  await page.getByLabel('Senha').fill('admin12345')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/admin$/)
+  await page.getByRole('link', { name: 'Novo servidor' }).click()
+
+  await expect(page).toHaveURL(/\/admin\/servidores\/novo$/)
+  await page.getByLabel('Nome').fill('Servidor E2E')
+  await page.getByLabel('E-mail').fill('servidor.e2e@example.com')
+  await page.getByRole('button', { name: 'Cadastrar servidor' }).click()
+
+  await expect(page).toHaveURL(/\/admin\/servidores\/[0-9a-f-]+$/)
+  const detailUrl = page.url()
+  await expect(page.getByRole('heading', { name: 'Servidor E2E' })).toBeVisible()
+
+  await page.getByLabel('Nome').fill('Servidor E2E Editado')
+  await page.getByLabel('E-mail').fill('servidor.editado@example.com')
+  await page.getByRole('button', { name: 'Salvar dados' }).click()
+  await expect(page.getByRole('heading', { name: 'Servidor E2E Editado' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Desativar servidor' }).click()
+  await page.getByRole('button', { name: 'Desativar', exact: true }).click()
+  await expect(page.getByText('Inativo', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reativar servidor' })).toBeVisible()
+
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill('servidor.editado@example.com')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(page.getByText('Não foi possível entrar com este e-mail.')).toBeVisible()
+
+  await page.goto(detailUrl)
+  await page.getByRole('button', { name: 'Reativar servidor' }).click()
+  await expect(page.getByText('Inativo', { exact: true })).toHaveCount(0)
+
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill('servidor.editado@example.com')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/agenda$/)
+  await expect(page.getByRole('heading', { name: /Olá, Servidor E2E Editado/ })).toBeVisible()
+})

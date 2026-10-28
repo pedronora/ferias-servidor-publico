@@ -22,6 +22,7 @@ export function buildEmployeeSummary(employee: EmployeeRow, rows: PeriodRow[]): 
     id: employee.id,
     name: employee.name,
     email: employee.email,
+    isActive: employee.isActive,
     totalDays: getTotalDays(periods),
     status: deriveStatus(periods),
     periods: rows.map(serializePeriod),

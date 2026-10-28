@@ -24,6 +24,7 @@ export interface EmployeeSummary {
   id: string
   name: string
   email: string
+  isActive: boolean
   totalDays: number
   status: ScheduleStatus
   periods: PeriodResponse[]

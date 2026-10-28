@@ -12,21 +12,24 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = typeof query.search === 'string' ? query.search.trim() : ''
   const status = typeof query.status === 'string' ? query.status : ''
+  const situation = query.situation === 'active' || query.situation === 'inactive'
+    ? query.situation
+    : 'all'
 
-  const where = search
-    ? and(
-      eq(employees.isActive, true),
-      or(
+  const situationCondition = situation === 'all'
+    ? undefined
+    : eq(employees.isActive, situation === 'active')
+  const searchCondition = search
+    ? or(
         ilike(employees.name, `%${search}%`),
         ilike(employees.email, `%${search}%`),
-      ),
-    )!
-    : eq(employees.isActive, true)
+      )
+    : undefined
 
   const employeeRows = await getDb()
     .select()
     .from(employees)
-    .where(where)
+    .where(and(situationCondition, searchCondition))
     .orderBy(asc(employees.name))
 
   const periodsByEmployee = groupPeriodsByEmployee(await getPeriodRowsForEmployees())

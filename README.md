@@ -116,17 +116,19 @@ Endpoints principais:
 - `GET /api/me/schedule`, `PUT /api/me/schedule`: consulta e salva a agenda em rascunho.
 - `POST /api/me/schedule/confirm`: confirma a agenda com exatamente 30 dias.
 - `POST /api/admin/auth/login`, `POST /api/admin/auth/logout`, `GET /api/admin/auth/session`: sessão do admin.
-- `GET /api/admin/employees`: lista e busca servidores.
-- `GET /api/admin/employees/:id`: detalhe da agenda de um servidor.
-- `PUT /api/admin/employees/:id/schedule`: substitui a agenda inteira, com override opcional.
-- `GET /api/admin/report`: relatório consolidado com coincidências.
+- `GET /api/admin/employees`: lista e busca servidores, com filtro `situation=all|active|inactive`.
+- `POST /api/admin/employees`: cadastra servidor ativo.
+- `GET /api/admin/employees/:id`: detalhe da agenda de um servidor, inclusive inativo.
+- `PATCH /api/admin/employees/:id`: edita nome, e-mail ou situação ativa/inativa.
+- `PUT /api/admin/employees/:id/schedule`: substitui a agenda inteira, com override opcional; exige servidor ativo.
+- `GET /api/admin/report`: relatório consolidado com coincidências, apenas de servidores ativos.
 
 As rotas de escrita exigem `Origin` compatível com `NUXT_PUBLIC_APP_URL` (ou `Sec-Fetch-Site` confiável). As sessões ficam em cookies selados `httpOnly`, separados para servidor e admin, com validade de 8 horas.
 
 ## Interface
 
-- `/login` e `/agenda`: autenticação do servidor, montagem dos períodos, salvamento de rascunho e confirmação da agenda.
-- `/admin/login`, `/admin` e `/admin/servidores/:id`: autenticação administrativa, busca de servidores e edição da agenda com override justificado.
+- `/login` e `/agenda`: autenticação do servidor somente por e-mail, montagem dos períodos, salvamento de rascunho e confirmação da agenda.
+- `/admin/login`, `/admin`, `/admin/servidores/novo` e `/admin/servidores/:id`: autenticação administrativa, busca, cadastro, edição, desativação/reativação de servidores e edição da agenda com override justificado.
 - `/admin/relatorio`: consolidado por servidor, coincidências de férias, impressão e exportação CSV.
 - As páginas protegidas usam middleware de sessão; a raiz redireciona para `/agenda` ou `/login` conforme a autenticação.
 - A interface reutiliza as mesmas regras de `shared/rules` e trata os erros estruturados da API.

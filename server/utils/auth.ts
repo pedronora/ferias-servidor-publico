@@ -1,5 +1,8 @@
+import { and, eq } from 'drizzle-orm'
 import { createError, getSession, useSession, type H3Event, type SessionConfig } from 'h3'
 import type { AdminSessionPayload, EmployeeSessionPayload } from '../../shared/types/api'
+import { employees } from '../database/schema'
+import { getDb } from './db'
 
 const EMPLOYEE_SESSION_NAME = 'ferias_employee'
 const ADMIN_SESSION_NAME = 'ferias_admin'
@@ -56,7 +59,33 @@ export async function requireEmployee(event: H3Event): Promise<EmployeeSessionPa
       statusMessage: 'Não autenticado.',
     })
   }
-  return session
+
+  const [employee] = await getDb()
+    .select({
+      id: employees.id,
+      name: employees.name,
+      email: employees.email,
+    })
+    .from(employees)
+    .where(and(
+      eq(employees.id, session.employeeId),
+      eq(employees.isActive, true),
+    ))
+    .limit(1)
+
+  if (!employee) {
+    await logoutEmployee(event)
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Não autenticado.',
+    })
+  }
+
+  return {
+    ...session,
+    email: employee.email,
+    name: employee.name,
+  }
 }
 
 export async function loginEmployee(event: H3Event, payload: EmployeeSessionPayload): Promise<void> {

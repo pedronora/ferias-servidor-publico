@@ -34,6 +34,10 @@ const override = ref(false)
 const overrideReason = ref('')
 const confirm = ref(false)
 const saving = ref(false)
+const employeeForm = reactive({ name: '', email: '' })
+const savingEmployee = ref(false)
+const statusDialogOpen = ref(false)
+const changingStatus = ref(false)
 const actionError = ref('')
 const actionIssues = ref<ValidationIssue[]>([])
 const successMessage = ref('')
@@ -47,12 +51,15 @@ watch(data, (value) => {
     startDate: period.startDate,
     endDate: period.endDate,
   }))
+  employeeForm.name = value.employee.name
+  employeeForm.email = value.employee.email
   confirm.value = value.employee.status === 'confirmed'
   override.value = value.employee.periods.some(period => period.adminOverride)
   overrideReason.value = value.employee.periods.find(period => period.overrideReason)?.overrideReason ?? ''
 }, { immediate: true })
 
 const isConfirmed = computed(() => data.value?.employee.status === 'confirmed')
+const isInactive = computed(() => data.value?.employee.isActive === false)
 const targetConfirmed = computed(() => confirm.value || isConfirmed.value)
 const structuralIssues = computed(() => validateStructure(periods.value))
 const businessIssues = computed(() => {
@@ -67,6 +74,7 @@ const businessIssues = computed(() => {
 })
 const blockingIssues = computed(() => override.value ? structuralIssues.value : businessIssues.value)
 const canSave = computed(() => !saving.value
+  && !isInactive.value
   && (!override.value || overrideReason.value.trim().length > 0)
   && blockingIssues.value.length === 0)
 
@@ -95,6 +103,68 @@ function handleRequestError(requestError: unknown): void {
 
   actionError.value = normalized.message
   actionIssues.value = normalized.issues
+}
+
+function applyEmployee(employee: EmployeeSummary): void {
+  if (data.value) {
+    data.value = {
+      ...data.value,
+      employee,
+    }
+  }
+}
+
+async function saveEmployee(): Promise<void> {
+  savingEmployee.value = true
+  clearFeedback()
+
+  try {
+    const response = await $fetch<{ employee: EmployeeSummary }>(
+      `/api/admin/employees/${employeeId.value}`,
+      {
+        method: 'PATCH',
+        body: {
+          name: employeeForm.name,
+          email: employeeForm.email,
+        },
+      },
+    )
+    applyEmployee(response.employee)
+    successMessage.value = 'Dados do servidor atualizados com sucesso.'
+  } catch (requestError) {
+    handleRequestError(requestError)
+  } finally {
+    savingEmployee.value = false
+  }
+}
+
+async function toggleEmployeeStatus(): Promise<void> {
+  if (!data.value) {
+    return
+  }
+
+  changingStatus.value = true
+  clearFeedback()
+
+  try {
+    const nextActive = !data.value.employee.isActive
+    const response = await $fetch<{ employee: EmployeeSummary }>(
+      `/api/admin/employees/${employeeId.value}`,
+      {
+        method: 'PATCH',
+        body: { isActive: nextActive },
+      },
+    )
+    applyEmployee(response.employee)
+    successMessage.value = nextActive
+      ? 'Servidor reativado com sucesso.'
+      : 'Servidor desativado com sucesso.'
+    statusDialogOpen.value = false
+  } catch (requestError) {
+    handleRequestError(requestError)
+  } finally {
+    changingStatus.value = false
+  }
 }
 
 async function saveSchedule(): Promise<void> {
@@ -169,7 +239,91 @@ async function saveSchedule(): Promise<void> {
             {{ data.employee.email }} · Ciclo de {{ formatDateBR(data.settings.cycleStart) }} a {{ formatDateBR(data.settings.cycleEnd) }}
           </p>
         </div>
-        <StatusBadge :status="data.employee.status" />
+        <div class="flex flex-wrap items-center gap-2">
+          <StatusBadge :status="data.employee.status" />
+          <span
+            v-if="!data.employee.isActive"
+            class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200"
+          >
+            Inativo
+          </span>
+        </div>
+      </div>
+
+      <div
+        v-if="isInactive"
+        class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+      >
+        Este servidor está inativo. Ele não consegue entrar no sistema e a agenda não pode ser editada até ser reativado.
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900">
+              Dados do servidor
+            </h2>
+            <p class="mt-1 text-sm text-slate-600">
+              Altere o nome ou o e-mail usado para entrar no sistema.
+            </p>
+          </div>
+          <button
+            v-if="data.employee.isActive"
+            type="button"
+            class="rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="changingStatus"
+            @click="statusDialogOpen = true"
+          >
+            Desativar servidor
+          </button>
+          <button
+            v-else
+            type="button"
+            class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            :disabled="changingStatus"
+            @click="toggleEmployeeStatus"
+          >
+            {{ changingStatus ? 'Reativando...' : 'Reativar servidor' }}
+          </button>
+        </div>
+
+        <form class="mt-4 grid gap-4 sm:grid-cols-2" @submit.prevent="saveEmployee">
+          <div>
+            <label for="employee-name" class="mb-1 block text-sm font-medium text-slate-700">
+              Nome
+            </label>
+            <input
+              id="employee-name"
+              v-model="employeeForm.name"
+              type="text"
+              required
+              maxlength="200"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
+            >
+          </div>
+          <div>
+            <label for="employee-email" class="mb-1 block text-sm font-medium text-slate-700">
+              E-mail
+            </label>
+            <input
+              id="employee-email"
+              v-model="employeeForm.email"
+              type="email"
+              required
+              maxlength="254"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
+            >
+          </div>
+          <div class="sm:col-span-2">
+            <button
+              type="submit"
+              class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              :disabled="savingEmployee"
+            >
+              {{ savingEmployee ? 'Salvando...' : 'Salvar dados' }}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-3">
@@ -238,7 +392,7 @@ async function saveSchedule(): Promise<void> {
         <PeriodsEditor
           v-model="periods"
           :rules="data.settings"
-          :disabled="saving"
+          :disabled="saving || isInactive"
         />
       </div>
 
@@ -249,7 +403,13 @@ async function saveSchedule(): Promise<void> {
 
         <div class="mt-4 space-y-4">
           <label for="override-enabled" class="flex items-start gap-3 text-sm text-slate-700">
-            <input id="override-enabled" v-model="override" type="checkbox" class="mt-1 size-4 rounded border-slate-300">
+            <input
+              id="override-enabled"
+              v-model="override"
+              type="checkbox"
+              :disabled="isInactive"
+              class="mt-1 size-4 rounded border-slate-300"
+            >
             <span>
               <span class="font-medium">Aplicar override</span>
               <span class="block text-xs text-slate-500">
@@ -267,7 +427,8 @@ async function saveSchedule(): Promise<void> {
               v-model="overrideReason"
               rows="3"
               maxlength="500"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
+              :disabled="isInactive"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600 disabled:bg-slate-100"
               placeholder="Descreva o motivo administrativo do ajuste."
             />
             <p class="mt-1 text-xs text-slate-500">
@@ -280,7 +441,7 @@ async function saveSchedule(): Promise<void> {
               id="confirm-schedule"
               v-model="confirm"
               type="checkbox"
-              :disabled="isConfirmed"
+              :disabled="isConfirmed || isInactive"
               class="mt-1 size-4 rounded border-slate-300"
             >
             <span>
@@ -317,5 +478,15 @@ async function saveSchedule(): Promise<void> {
         </div>
       </div>
     </template>
+
+    <ConfirmDialog
+      :open="statusDialogOpen"
+      title="Desativar servidor?"
+      description="O servidor deixará de entrar no sistema e a agenda ficará bloqueada para edição até a reativação."
+      confirm-label="Desativar"
+      :busy="changingStatus"
+      @confirm="toggleEmployeeStatus"
+      @cancel="statusDialogOpen = false"
+    />
   </section>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { EmployeeSummary } from '~~/shared/types/api'
 import { formatDateRangeBR } from '~~/shared/utils/date'
+import { normalizeApiError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'admin', layout: 'admin' })
 
@@ -8,6 +9,7 @@ useHead({ title: 'Servidores | Administração' })
 
 const search = ref('')
 const status = ref('')
+const situation = ref('all')
 const statusOptions = [
   { value: '', label: 'Todos os status' },
   { value: 'confirmed', label: 'Confirmada' },
@@ -15,14 +17,38 @@ const statusOptions = [
   { value: 'draft', label: 'Rascunho' },
   { value: 'empty', label: 'Sem agenda' },
 ]
+const situationOptions = [
+  { value: 'all', label: 'Todos' },
+  { value: 'active', label: 'Ativos' },
+  { value: 'inactive', label: 'Inativos' },
+]
+const reactivatingId = ref('')
+const actionError = ref('')
 
 const { data, pending, error, refresh } = await useFetch<{
   employees: EmployeeSummary[]
   total: number
 }>('/api/admin/employees', {
-  query: { search, status },
+  query: { search, status, situation },
   headers: useRequestHeaders(['cookie']),
 })
+
+async function reactivate(employee: EmployeeSummary): Promise<void> {
+  reactivatingId.value = employee.id
+  actionError.value = ''
+
+  try {
+    await $fetch(`/api/admin/employees/${employee.id}`, {
+      method: 'PATCH',
+      body: { isActive: true },
+    })
+    await refresh()
+  } catch (requestError) {
+    actionError.value = normalizeApiError(requestError).message
+  } finally {
+    reactivatingId.value = ''
+  }
+}
 </script>
 
 <template>
@@ -36,16 +62,24 @@ const { data, pending, error, refresh } = await useFetch<{
           Servidores
         </h1>
         <p class="mt-1 text-sm text-slate-600">
-          Consulte e ajuste as agendas de férias dos servidores ativos.
+          Consulte, cadastre e gerencie as agendas dos servidores.
         </p>
       </div>
-      <p v-if="data" class="text-sm text-slate-600">
-        {{ data.total }} servidor(es) encontrado(s)
-      </p>
+      <div class="flex items-center gap-3">
+        <p v-if="data" class="text-sm text-slate-600">
+          {{ data.total }} servidor(es) encontrado(s)
+        </p>
+        <NuxtLink
+          to="/admin/servidores/novo"
+          class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          Novo servidor
+        </NuxtLink>
+      </div>
     </div>
 
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="grid gap-3 sm:grid-cols-[1fr_220px]">
+      <div class="grid gap-3 sm:grid-cols-[1fr_200px_200px]">
         <div>
           <label for="employee-search" class="mb-1 block text-sm font-medium text-slate-700">
             Buscar por nome ou e-mail
@@ -72,7 +106,29 @@ const { data, pending, error, refresh } = await useFetch<{
             </option>
           </select>
         </div>
+        <div>
+          <label for="employee-situation" class="mb-1 block text-sm font-medium text-slate-700">
+            Situação
+          </label>
+          <select
+            id="employee-situation"
+            v-model="situation"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
+          >
+            <option v-for="option in situationOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
       </div>
+    </div>
+
+    <div
+      v-if="actionError"
+      class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+      role="alert"
+    >
+      {{ actionError }}
     </div>
 
     <div
@@ -119,7 +175,15 @@ const { data, pending, error, refresh } = await useFetch<{
           <tbody class="divide-y divide-slate-100">
             <tr v-for="employee in data.employees" :key="employee.id" class="hover:bg-slate-50">
               <td class="px-4 py-3">
-                <p class="font-medium text-slate-900">{{ employee.name }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-medium text-slate-900">{{ employee.name }}</p>
+                  <span
+                    v-if="!employee.isActive"
+                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200"
+                  >
+                    Inativo
+                  </span>
+                </div>
                 <p class="text-xs text-slate-500">{{ employee.email }}</p>
               </td>
               <td class="px-4 py-3 text-slate-600">
@@ -137,12 +201,23 @@ const { data, pending, error, refresh } = await useFetch<{
                 <StatusBadge :status="employee.status" />
               </td>
               <td class="px-4 py-3 text-right">
-                <NuxtLink
-                  :to="`/admin/servidores/${employee.id}`"
-                  class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white"
-                >
-                  Abrir agenda
-                </NuxtLink>
+                <div class="flex justify-end gap-2">
+                  <NuxtLink
+                    :to="`/admin/servidores/${employee.id}`"
+                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white"
+                  >
+                    Abrir agenda
+                  </NuxtLink>
+                  <button
+                    v-if="!employee.isActive"
+                    type="button"
+                    class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    :disabled="reactivatingId === employee.id"
+                    @click="reactivate(employee)"
+                  >
+                    {{ reactivatingId === employee.id ? 'Reativando...' : 'Reativar' }}
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

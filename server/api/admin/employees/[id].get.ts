@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createError, getRouterParam } from 'h3'
 import { z } from 'zod'
 import { validateSchedule } from '../../../../shared/rules/vacation'
@@ -22,10 +22,7 @@ export default defineEventHandler(async (event) => {
   const [employee] = await getDb()
     .select()
     .from(employees)
-    .where(and(
-      eq(employees.id, parsedId.data),
-      eq(employees.isActive, true),
-    ))
+    .where(eq(employees.id, parsedId.data))
     .limit(1)
 
   if (!employee) {

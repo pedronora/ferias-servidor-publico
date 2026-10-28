@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createError, getRouterParam, readBody } from 'h3'
 import { z } from 'zod'
 import { adminScheduleInputSchema } from '../../../../../shared/schemas/schedule'
@@ -36,14 +36,15 @@ export default defineEventHandler(async (event) => {
   const [employee] = await db
     .select()
     .from(employees)
-    .where(and(
-      eq(employees.id, parsedId.data),
-      eq(employees.isActive, true),
-    ))
+    .where(eq(employees.id, parsedId.data))
     .limit(1)
 
   if (!employee) {
     throw createError({ statusCode: 404, statusMessage: 'Servidor não encontrado.' })
+  }
+
+  if (!employee.isActive) {
+    throwConflict('Servidor inativo. Reative antes de editar a agenda.')
   }
 
   const rules = await getSettingsRules()

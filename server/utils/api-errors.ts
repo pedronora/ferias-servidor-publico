@@ -32,10 +32,16 @@ export function throwConflict(message: string): never {
 }
 
 export function isDatabaseError(error: unknown, code: string): boolean {
-  return typeof error === 'object'
-    && error !== null
-    && 'code' in error
-    && (error as { code?: unknown }).code === code
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  if ('code' in error && (error as { code?: unknown }).code === code) {
+    return true
+  }
+
+  return 'cause' in error
+    && isDatabaseError((error as { cause?: unknown }).cause, code)
 }
 
 export function getClientIp(event: H3Event): string {

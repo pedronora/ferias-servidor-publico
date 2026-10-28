@@ -231,6 +231,104 @@ describe('API de autenticação, agenda e administração', async () => {
       ]))
   })
 
+  it('cadastra, edita, desativa e reativa servidor', async () => {
+    const createdEmail = `test-api-created-${suffix}@example.com`
+    const create = await request('/api/admin/employees', {
+      method: 'POST',
+      body: { name: 'Servidor Criado', email: createdEmail },
+      cookie: adminCookie,
+    })
+
+    expect(create.status).toBe(201)
+    const created = (create.data as { employee: { id: string, isActive: boolean, email: string } }).employee
+    expect(created).toMatchObject({ email: createdEmail, isActive: true })
+
+    const duplicate = await request('/api/admin/employees', {
+      method: 'POST',
+      body: { name: 'Servidor Duplicado', email: createdEmail.toUpperCase() },
+      cookie: adminCookie,
+    })
+    expect(duplicate.status).toBe(409)
+
+    const update = await request(`/api/admin/employees/${created.id}`, {
+      method: 'PATCH',
+      body: { name: 'Servidor Editado' },
+      cookie: adminCookie,
+    })
+    expect(update.status).toBe(200)
+    expect(update.data).toMatchObject({
+      employee: { id: created.id, name: 'Servidor Editado' },
+    })
+
+    const activeLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: { email: createdEmail },
+    })
+    expect(activeLogin.status).toBe(200)
+    const createdCookie = activeLogin.cookie
+
+    const deactivate = await request(`/api/admin/employees/${created.id}`, {
+      method: 'PATCH',
+      body: { isActive: false },
+      cookie: adminCookie,
+    })
+    expect(deactivate.status).toBe(200)
+    expect(deactivate.data).toMatchObject({
+      employee: { id: created.id, isActive: false },
+    })
+
+    const inactiveList = await request(
+      `/api/admin/employees?situation=inactive&search=${encodeURIComponent(createdEmail)}`,
+      { cookie: adminCookie },
+    )
+    expect(inactiveList.data).toMatchObject({
+      employees: [expect.objectContaining({ id: created.id, isActive: false })],
+    })
+
+    const inactiveDetail = await request(`/api/admin/employees/${created.id}`, {
+      cookie: adminCookie,
+    })
+    expect(inactiveDetail.data).toMatchObject({
+      employee: { id: created.id, isActive: false },
+    })
+
+    const inactiveSchedule = await request(`/api/admin/employees/${created.id}/schedule`, {
+      method: 'PUT',
+      body: { periods: validPeriods, override: false, confirm: false },
+      cookie: adminCookie,
+    })
+    expect(inactiveSchedule.status).toBe(409)
+
+    const inactiveLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: { email: createdEmail },
+    })
+    expect(inactiveLogin.status).toBe(401)
+
+    const staleSession = await request('/api/me/schedule', { cookie: createdCookie })
+    expect(staleSession.status).toBe(401)
+
+    const report = await request('/api/admin/report', { cookie: adminCookie })
+    const reportEmployees = (report.data as { employees: Array<{ id: string }> }).employees
+    expect(reportEmployees.some(employee => employee.id === created.id)).toBe(false)
+
+    const reactivate = await request(`/api/admin/employees/${created.id}`, {
+      method: 'PATCH',
+      body: { isActive: true },
+      cookie: adminCookie,
+    })
+    expect(reactivate.status).toBe(200)
+    expect(reactivate.data).toMatchObject({
+      employee: { id: created.id, isActive: true },
+    })
+
+    const reactivatedLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: { email: createdEmail },
+    })
+    expect(reactivatedLogin.status).toBe(200)
+  })
+
   it('consulta o detalhe do servidor', async () => {
     const detail = await request(`/api/admin/employees/${employeeId}`, {
       cookie: adminCookie,
