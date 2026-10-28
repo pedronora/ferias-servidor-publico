@@ -73,15 +73,19 @@ function handleRequestError(requestError: unknown): void {
   actionIssues.value = normalized.issues
 }
 
+async function persistDraft(): Promise<ScheduleResponse> {
+  return $fetch<ScheduleResponse>('/api/me/schedule', {
+    method: 'PUT',
+    body: { periods: periods.value },
+  })
+}
+
 async function saveDraft(): Promise<void> {
   saving.value = true
   clearFeedback()
 
   try {
-    const response = await $fetch<ScheduleResponse>('/api/me/schedule', {
-      method: 'PUT',
-      body: { periods: periods.value },
-    })
+    const response = await persistDraft()
     applyResponse(response)
     successMessage.value = 'Rascunho salvo com sucesso.'
   } catch (requestError) {
@@ -96,6 +100,7 @@ async function confirmSchedule(): Promise<void> {
   clearFeedback()
 
   try {
+    await persistDraft()
     const response = await $fetch<ScheduleResponse>('/api/me/schedule/confirm', {
       method: 'POST',
     })

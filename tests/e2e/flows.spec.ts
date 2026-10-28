@@ -198,3 +198,29 @@ test('seleciona um período completo clicando no calendário', async ({ page }) 
 
   await expect(period3Input).toHaveValue('29/08/2027 - 31/08/2027')
 })
+
+test('confirma a agenda com as alterações atuais sem salvar o rascunho antes', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill('ana@example.com')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/agenda$/)
+
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+  const period2 = page.getByLabel('Início e fim do período 2')
+  await period2.fill('04/08/2027 - 13/08/2027')
+  await period2.press('Enter')
+
+  await page.getByRole('button', { name: 'Adicionar período' }).click()
+  const period3 = page.getByLabel('Início e fim do período 3')
+  await period3.fill('29/08/2027 - 07/09/2027')
+  await period3.press('Enter')
+
+  await expect(page.getByText(/30\/30 dias/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Confirmar agenda' }).click()
+  await page.getByRole('button', { name: 'Confirmar definitivamente' }).click()
+
+  await expect(page.getByText('Pedido de férias submetido com sucesso.')).toBeVisible()
+  await expect(page.getByText('Solicitado', { exact: true })).toBeVisible()
+})
