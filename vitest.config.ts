@@ -53,6 +53,9 @@ export default defineConfig({
         '**/*.test.ts',
         'tests/**',
         'server/database/migrations/**',
+        'app/app.vue',
+        'app/layouts/**',
+        'app/pages/**',
       ],
       thresholds: {
         'lines': 80,

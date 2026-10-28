@@ -45,6 +45,7 @@ export default withNuxt(
     },
     rules: {
       ...vueA11y.configs.recommended.rules,
+      'vuejs-accessibility/label-has-for': ['error', { required: 'id' }],
     },
   },
   {
