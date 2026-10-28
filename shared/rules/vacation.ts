@@ -152,7 +152,7 @@ export function suggestedInitialDate(
 
   const previous = findLastCompletePeriodBefore(periods, index)
   const earliestAfterPrevious = previous
-    ? parseISODate(earliestNextStart(previous.endDate, rules.minGapDays) ?? '')
+    ? parseISODate(earliestNextStart(previous.endDate, rules.minGapDays)!)
     : null
   const fallback = today < cycleStart ? cycleStart : today
   const candidate = earliestAfterPrevious ?? fallback

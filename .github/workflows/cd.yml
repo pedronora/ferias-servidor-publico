@@ -17,6 +17,9 @@ concurrency:
 jobs:
   ci:
     name: CI
+    permissions:
+      contents: read
+      pull-requests: write
     uses: ./.github/workflows/ci.yml
 
   publish:
