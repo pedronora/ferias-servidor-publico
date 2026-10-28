@@ -1,23 +1,23 @@
 # AGENTS.md
 
-Instruções para agentes de código que trabalham neste repositório.
+Instructions for code agents working in this repository.
 
-## Visão geral
+## Overview
 
-Sistema web de marcação de férias para servidores públicos. A aplicação usa Nuxt 4 com SSR, Vue 3, Tailwind CSS 4, PostgreSQL 18, Drizzle ORM e Vitest/Playwright.
+Web-based vacation scheduling system for public servants. The application uses Nuxt 4 with SSR, Vue 3, Tailwind CSS 4, PostgreSQL 18, Drizzle ORM, and Vitest/Playwright.
 
-## Diretrizes de trabalho
+## Working guidelines
 
-- Sempre consulte e siga a skill `/karpathy-guidelines` antes de planejar, implementar ou revisar mudanças.
+- Always consult and follow the `/karpathy-guidelines` skill before planning, implementing, or reviewing changes.
 
-## Requisitos
+## Requirements
 
 - Node.js 24.19.0 (`.nvmrc`)
 - pnpm 11.22.0
-- Docker e Docker Compose
-- PostgreSQL 18 para desenvolvimento local ou containers do projeto
+- Docker and Docker Compose
+- PostgreSQL 18 for local development or project containers
 
-## Comandos
+## Commands
 
 ```bash
 nvm use
@@ -43,10 +43,10 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-- `pnpm lint` usa ESLint com `--max-warnings 0`. Não use Prettier, Biome ou dprint.
-- Rode `pnpm lint` e `pnpm typecheck` antes de concluir qualquer alteração.
-- Para mudanças de comportamento, rode a suíte relevante: unit/nuxt, integração e E2E.
-- `pnpm test:integration` exige o banco de teste em `localhost:5433`:
+- `pnpm lint` uses ESLint with `--max-warnings 0`. Do not use Prettier, Biome, or dprint.
+- Run `pnpm lint` and `pnpm typecheck` before finishing any change.
+- For behavior changes, run the relevant suite: unit/nuxt, integration, and E2E.
+- `pnpm test:integration` requires the test database at `localhost:5433`:
 
 ```bash
 docker compose -f docker-compose.test.yml up -d
@@ -54,7 +54,7 @@ pnpm test:integration
 docker compose -f docker-compose.test.yml down -v
 ```
 
-- O E2E sobe e derruba a stack isolada. Se as portas padrão estiverem ocupadas:
+- E2E starts and tears down the isolated stack. If the default ports are in use:
 
 ```bash
 APP_PORT=3100 POSTGRES_PORT=5434 \
@@ -63,90 +63,90 @@ E2E_BASE_URL=http://localhost:3100 \
 pnpm test:e2e
 ```
 
-## Estrutura
+## Structure
 
 ```text
-app/       páginas, layouts, componentes, composables e middleware Nuxt
-server/    API Nitro, autenticação, sessões e acesso ao banco
-shared/    schemas Zod, regras puras de férias, tipos e utilitários
-drizzle/   schema e migrations SQL
-tests/     unitários, componentes, integração e E2E
-scripts/   migrations, seed, entrypoint e automação
-docs/      documentação operacional
+app/       Nuxt pages, layouts, components, composables, and middleware
+server/    Nitro API, authentication, sessions, and database access
+shared/    Zod schemas, pure vacation rules, types, and utilities
+drizzle/   schema and SQL migrations
+tests/     unit, component, integration, and E2E tests
+scripts/   migrations, seed, entrypoint, and automation
+docs/      operational documentation
 ```
 
-## Regras de negócio
+## Business rules
 
-- Cada servidor tem 30 dias de férias por ciclo.
-- São permitidos no máximo 3 períodos.
-- Cada período deve ter pelo menos 1 dia.
-- Deve haver pelo menos 15 dias livres entre períodos.
-- Períodos não podem se sobrepor nem sair do ciclo configurado.
-- O ciclo atual é definido em `settings`; não hardcode datas de ciclo.
-- O status interno `confirmed` representa um pedido submetido, não férias aprovadas. Na interface, o badge correspondente é `Solicitado`.
-- A análise/aprovação acontece fora do sistema.
-- Regras puras ficam em `shared/rules/vacation.ts` e devem ser reutilizadas no cliente e no servidor.
-- O servidor sempre revalida regras de negócio, mesmo que a interface já valide.
+- Each employee has 30 vacation days per cycle.
+- At most 3 periods are allowed.
+- Each period must be at least 1 day long.
+- There must be at least 15 free days between periods.
+- Periods cannot overlap or fall outside the configured cycle.
+- The current cycle is defined in `settings`; do not hardcode cycle dates.
+- The internal `confirmed` status represents a submitted request, not approved vacation. In the UI, the corresponding badge is `Solicitado`.
+- Review/approval happens outside the system.
+- Pure rules live in `shared/rules/vacation.ts` and must be reused on the client and server.
+- The server always revalidates business rules, even if the UI already validates them.
 
-## Convenções de código
+## Code conventions
 
-- TypeScript em todo o projeto; evite `any` sem justificativa.
-- Componentes Vue usam `<script setup lang="ts">`.
-- Siga o estilo e a estrutura dos arquivos vizinhos antes de criar novos padrões.
-- Não adicione comentários no código, salvo quando forem realmente necessários para explicar uma decisão não óbvia.
-- Textos da interface são em português do Brasil.
-- Datas exibidas ao usuário usam `DD/MM/AAAA`; no banco e na API use ISO `YYYY-MM-DD`.
-- Validação de entrada usa Zod em `shared/schemas`.
-- Erros da API devem seguir o formato estruturado existente e ser normalizados no cliente.
-- Use Tailwind e os componentes existentes; não introduza bibliotecas de UI sem necessidade.
-- O `VueDatePicker` usa `formats`/`textInput` para `dd/MM/yyyy`, `partialRange: false` e `ariaLabels` para manter o label acessível.
+- TypeScript throughout the project; avoid `any` without justification.
+- Vue components use `<script setup lang="ts">`.
+- Follow the style and structure of neighboring files before creating new patterns.
+- Do not add comments to code unless they are truly necessary to explain a non-obvious decision.
+- UI text is in Brazilian Portuguese.
+- Dates shown to users use `DD/MM/AAAA`; in the database and API use ISO `YYYY-MM-DD`.
+- Input validation uses Zod in `shared/schemas`.
+- API errors must follow the existing structured format and be normalized on the client.
+- Use Tailwind and the existing components; do not introduce UI libraries unnecessarily.
+- `VueDatePicker` uses `formats`/`textInput` for `dd/MM/yyyy`, `partialRange: false`, and `ariaLabels` to keep the label accessible.
 
-## Testes
+## Testing
 
-- TDD quando possível: reproduza o bug com teste antes da correção.
-- Testes devem ser determinísticos: controle relógio/fuso e evite dependência de ordem.
-- A suíte unitária roda em `TZ=UTC` e `TZ=America/Sao_Paulo` no CI.
-- Cobertura mínima global: 80%. Em `shared/rules`: 100% de linhas e ramos.
-- Páginas e fluxos críticos são cobertos por E2E.
-- Não remova testes para fazer a suíte passar; ajuste o comportamento ou o teste com justificativa.
+- TDD when possible: reproduce the bug with a test before fixing it.
+- Tests must be deterministic: control the clock/time zone and avoid order dependence.
+- The unit suite runs with `TZ=UTC` and `TZ=America/Sao_Paulo` in CI.
+- Minimum global coverage: 80%. In `shared/rules`: 100% lines and branches.
+- Critical pages and flows are covered by E2E.
+- Do not remove tests to make the suite pass; adjust the behavior or the test with justification.
 
-## Banco e migrations
+## Database and migrations
 
-- O schema Drizzle fica em `server/database/schema.ts`.
-- Gere migrations com `pnpm db:generate` e aplique com `pnpm db:migrate`.
-- Nunca edite uma migration já aplicada em produção; crie uma nova.
-- O seed é idempotente e cria o admin a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
-- `SEED_DEMO_DATA=true` cria Maria, João e Ana para demonstração.
-- O login do servidor é apenas por e-mail; não reintroduza senha de servidor.
+- The Drizzle schema lives in `server/database/schema.ts`.
+- Generate migrations with `pnpm db:generate` and apply them with `pnpm db:migrate`.
+- Never edit a migration already applied in production; create a new one.
+- The seed is idempotent and creates the admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
+- `SEED_DEMO_DATA=true` creates Maria, João, and Ana for demonstration.
+- Employee login is email-only; do not reintroduce an employee password.
 
-## Segurança
+## Security
 
-- Nunca commite `.env`, segredos, tokens ou credenciais reais.
-- Sessões usam cookies `httpOnly` selados, separados para servidor e admin.
-- Rotas de escrita exigem validação de `Origin`/`Sec-Fetch-Site`.
-- Mantenha rate limit no login e mensagens genéricas para reduzir enumeração.
-- Senhas de admin usam Argon2id.
-- Valide e autorize novamente no servidor; nunca confie apenas no cliente.
+- Never commit `.env`, secrets, tokens, or real credentials.
+- Sessions use sealed `httpOnly` cookies, separate for employee and admin.
+- Write routes require `Origin`/`Sec-Fetch-Site` validation.
+- Keep rate limiting on login and generic messages to reduce enumeration.
+- Admin passwords use Argon2id.
+- Validate and authorize again on the server; never trust only the client.
 
-## Git e PR
+## Git and PR
 
-- `main` é protegida. Trabalhe em branches curtas:
-  - `feature/nome-curto`
-  - `fix/nome-curto`
-  - `chore/nome-curto`
-  - `docs/nome-curto`
+- `main` is protected. Work on short-lived branches:
+  - `feature/short-name`
+  - `fix/short-name`
+  - `chore/short-name`
+  - `docs/short-name`
 - Use Conventional Commits: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`, `ci`.
-- Abra PR para `main`; o merge é por squash.
-- O status obrigatório da `main` é `ci-success`.
-- Não faça force push nem delete a `main`.
-- Mantenha o PR pequeno, com evidências dos testes executados.
+- Open a PR to `main`; merging is by squash.
+- The required status for `main` is `ci-success`.
+- Do not force push or delete `main`.
+- Keep the PR small, with evidence of the tests run.
 
-## Checklist antes de concluir
+## Checklist before finishing
 
 1. `pnpm lint`
 2. `pnpm typecheck`
 3. `pnpm test:unit`
 4. `pnpm test:nuxt`
-5. `pnpm test:integration` quando houver mudança de servidor/banco
-6. `pnpm test:e2e` quando houver mudança de fluxo/interface
-7. Revisar `git status` e garantir que nenhum segredo ou artefato foi incluído
+5. `pnpm test:integration` when there is a server/database change
+6. `pnpm test:e2e` when there is a flow/interface change
+7. Review `git status` and ensure no secret or artifact was included
