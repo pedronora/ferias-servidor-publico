@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
+    "build:scripts": "tsx scripts/build-scripts.ts",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "lint": "eslint . --max-warnings 0",

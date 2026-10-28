@@ -10,7 +10,8 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm build
+RUN pnpm build \
+  && pnpm build:scripts
 
 FROM node:24.19-alpine AS runtime
 ENV NODE_ENV=production

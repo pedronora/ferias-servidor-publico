@@ -41,6 +41,8 @@ Para desenvolvimento com hot reload:
 docker compose -f docker-compose.dev.yml up --build
 ```
 
+Se a 5432 estiver ocupada, use `POSTGRES_PORT=5434 docker compose -f docker-compose.dev.yml up --build`.
+
 Para parar:
 
 ```bash
@@ -87,6 +89,17 @@ O admin é criado de forma idempotente pelo seed, usando:
 - `ADMIN_PASSWORD`
 
 Em produção, troque os valores do `.env` antes da primeira subida. O seed não redefine a senha de um admin existente.
+
+Com `SEED_DEMO_DATA=true`, o seed também cria três servidores de demonstração (`maria@example.com`, `joao@example.com` e `ana@example.com`), todos com a senha `servidor123`. Maria e João têm três períodos confirmados; Ana tem um rascunho.
+
+## Modelo de dados e regras
+
+- `settings`: linha única com o ciclo, total de dias, máximo de períodos, mínimo por período e intervalo mínimo.
+- `employees`: servidores, com e-mail único sem diferenciar maiúsculas e exclusão lógica por `is_active`.
+- `admins`: administradores, separados dos servidores.
+- `vacation_periods`: períodos com data inicial/final, status, override administrativo e justificativa.
+- O PostgreSQL impede fim anterior ao início, status inválido, sobreposição para o mesmo servidor (`EXCLUDE USING gist` com `btree_gist`) e justificativa ausente em override.
+- As regras puras ficam em `shared/rules/vacation.ts` e são reutilizadas pelo servidor e pela interface.
 
 ## Scripts
 

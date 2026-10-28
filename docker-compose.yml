@@ -32,6 +32,8 @@ services:
       NUXT_PUBLIC_APP_URL: ${NUXT_PUBLIC_APP_URL:-http://localhost:3000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin12345}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEED: ${RUN_SEED:-true}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       TZ: ${TZ:-America/Sao_Paulo}
     ports:

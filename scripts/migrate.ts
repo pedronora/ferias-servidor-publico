@@ -1,9 +1,12 @@
-import 'dotenv/config'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
+
+if (existsSync('.env')) {
+  process.loadEnvFile('.env')
+}
 
 const migrationsFolder = resolve('drizzle/migrations')
 const journalPath = resolve(migrationsFolder, 'meta/_journal.json')
