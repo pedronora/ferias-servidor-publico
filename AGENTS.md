@@ -6,6 +6,10 @@ Instruções para agentes de código que trabalham neste repositório.
 
 Sistema web de marcação de férias para servidores públicos. A aplicação usa Nuxt 4 com SSR, Vue 3, Tailwind CSS 4, PostgreSQL 18, Drizzle ORM e Vitest/Playwright.
 
+## Diretrizes de trabalho
+
+- Sempre consulte e siga a skill `/karpathy-guidelines` antes de planejar, implementar ou revisar mudanças.
+
 ## Requisitos
 
 - Node.js 24.19.0 (`.nvmrc`)
