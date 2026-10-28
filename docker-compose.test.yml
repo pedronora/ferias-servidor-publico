@@ -1,3 +1,5 @@
+name: ferias-test
+
 services:
   db-test:
     image: postgres:18-alpine
