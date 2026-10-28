@@ -62,6 +62,10 @@ docker compose logs -f app
 docker compose logs -f db
 ```
 
+## Deploy no TrueNAS
+
+O deploy de produção no TrueNAS SCALE é manual, com imagem do GHCR e Cloudflare Tunnel. Veja `docs/deploy-truenas.md`.
+
 ## Banco isolado para testes
 
 ```bash
@@ -182,6 +186,7 @@ server/    API Nitro e acesso ao banco
 drizzle/   migrations SQL
 tests/     unitários, componentes, integração e E2E
 scripts/   migrations, seed, entrypoint e automação
+deploy/    compose e exemplos de deploy
 docs/      documentação operacional
 ```
 
