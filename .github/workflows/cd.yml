@@ -67,7 +67,7 @@ jobs:
       packages: read
       security-events: write
     steps:
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
           format: table
