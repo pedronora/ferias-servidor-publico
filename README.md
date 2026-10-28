@@ -97,12 +97,12 @@ O admin é criado de forma idempotente pelo seed, usando:
 
 Em produção, troque os valores do `.env` antes da primeira subida. O seed não redefine a senha de um admin existente.
 
-Com `SEED_DEMO_DATA=true`, o seed também cria três servidores de demonstração (`maria@example.com`, `joao@example.com` e `ana@example.com`), todos com a senha `servidor123`. Maria e João têm três períodos confirmados; Ana tem um rascunho.
+Com `SEED_DEMO_DATA=true`, o seed também cria três servidores de demonstração (`maria@example.com`, `joao@example.com` e `ana@example.com`). O acesso do servidor é feito apenas pelo e-mail cadastrado, sem senha. Maria e João têm três períodos confirmados; Ana tem um rascunho.
 
 ## Modelo de dados e regras
 
 - `settings`: linha única com o ciclo, total de dias, máximo de períodos, mínimo por período e intervalo mínimo.
-- `employees`: servidores, com e-mail único sem diferenciar maiúsculas e exclusão lógica por `is_active`.
+- `employees`: servidores, com e-mail único sem diferenciar maiúsculas, acesso somente por e-mail e exclusão lógica por `is_active`.
 - `admins`: administradores, separados dos servidores.
 - `vacation_periods`: períodos com data inicial/final, status, override administrativo e justificativa.
 - O PostgreSQL impede fim anterior ao início, status inválido, sobreposição para o mesmo servidor (`EXCLUDE USING gist` com `btree_gist`) e justificativa ausente em override.
@@ -112,7 +112,7 @@ Com `SEED_DEMO_DATA=true`, o seed também cria três servidores de demonstraçã
 
 Endpoints principais:
 
-- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`: sessão do servidor.
+- `POST /api/auth/login` recebe apenas `{ "email": "..." }`, `POST /api/auth/logout`, `GET /api/auth/session`: sessão do servidor.
 - `GET /api/me/schedule`, `PUT /api/me/schedule`: consulta e salva a agenda em rascunho.
 - `POST /api/me/schedule/confirm`: confirma a agenda com exatamente 30 dias.
 - `POST /api/admin/auth/login`, `POST /api/admin/auth/logout`, `GET /api/admin/auth/session`: sessão do admin.
@@ -185,9 +185,11 @@ docs/      documentação operacional
 ## Segurança
 
 - Sessões em cookies `httpOnly` selados, separados para servidor e admin.
+- Login do servidor apenas por e-mail ativo; a sessão é invalidada enquanto o servidor estiver inativo.
 - Senha do admin com Argon2id.
 - Rate limit no login.
 - Mensagem genérica no login para reduzir enumeração de e-mails.
+- O acesso do servidor por e-mail é uma identificação simples, não uma autenticação forte; quem souber o e-mail cadastrado pode entrar.
 - Validação Zod e regras de negócio novamente no servidor.
 - CSRF por `Origin`/`Sec-Fetch-Site` e SameSite.
 - Constraints de integridade no PostgreSQL, incluindo exclusion constraint com `btree_gist`.

@@ -10,7 +10,6 @@ test('redireciona visitante para o login do servidor', async ({ page }) => {
 test('servidor com agenda confirmada visualiza a escala em modo somente leitura', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('E-mail').fill('maria@example.com')
-  await page.getByLabel('Senha').fill('servidor123')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/agenda$/)
@@ -27,7 +26,6 @@ test('servidor com agenda confirmada visualiza a escala em modo somente leitura'
 test('servidor com rascunho salva e gerencia períodos', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('E-mail').fill('ana@example.com')
-  await page.getByLabel('Senha').fill('servidor123')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/agenda$/)

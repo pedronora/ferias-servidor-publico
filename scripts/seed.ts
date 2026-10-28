@@ -20,7 +20,6 @@ const demoEmployees = [
   {
     name: 'Maria Souza',
     email: 'maria@example.com',
-    password: 'servidor123',
     periods: [
       { startDate: '2027-01-10', endDate: '2027-01-19', status: 'confirmed' as const },
       { startDate: '2027-02-04', endDate: '2027-02-13', status: 'confirmed' as const },
@@ -30,7 +29,6 @@ const demoEmployees = [
   {
     name: 'João Pereira',
     email: 'joao@example.com',
-    password: 'servidor123',
     periods: [
       { startDate: '2027-01-10', endDate: '2027-01-19', status: 'confirmed' as const },
       { startDate: '2027-02-04', endDate: '2027-02-13', status: 'confirmed' as const },
@@ -40,7 +38,6 @@ const demoEmployees = [
   {
     name: 'Ana Lima',
     email: 'ana@example.com',
-    password: 'servidor123',
     periods: [
       { startDate: '2027-07-10', endDate: '2027-07-19', status: 'draft' as const },
     ],
@@ -102,7 +99,6 @@ async function seedDemo(): Promise<void> {
       const created = await db.insert(employees).values({
         name: demo.name,
         email: demo.email,
-        passwordHash: await hash(demo.password),
       }).returning({ id: employees.id })
       employeeId = created[0]!.id
       console.log(`Servidor demo ${demo.email} criado.`)

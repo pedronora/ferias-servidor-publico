@@ -8,8 +8,8 @@ const pool = new Pool({ connectionString: DATABASE_URL })
 
 async function createEmployee(email: string): Promise<string> {
   const result = await pool.query<{ id: string }>(
-    'insert into employees (name, email, password_hash) values ($1, $2, $3) returning id',
-    ['Servidor de teste', email, 'hash-de-teste'],
+    'insert into employees (name, email) values ($1, $2) returning id',
+    ['Servidor de teste', email],
   )
   return result.rows[0]!.id
 }
@@ -60,8 +60,8 @@ describe('constraints do banco', () => {
 
     await expectDatabaseError(
       pool.query(
-        'insert into employees (name, email, password_hash) values ($1, $2, $3)',
-        ['Outro', 'TEST-CASE@example.com', 'hash'],
+        'insert into employees (name, email) values ($1, $2)',
+        ['Outro', 'TEST-CASE@example.com'],
       ),
       '23505',
     )

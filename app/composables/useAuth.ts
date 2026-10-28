@@ -23,10 +23,10 @@ export function useAuth() {
     return data
   }
 
-  async function login(email: string, password: string): Promise<EmployeeSessionResponse> {
+  async function login(email: string): Promise<EmployeeSessionResponse> {
     await $fetch('/api/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: { email },
     })
     return fetchSession()
   }

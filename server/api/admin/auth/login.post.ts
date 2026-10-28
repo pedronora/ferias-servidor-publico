@@ -1,7 +1,7 @@
 import { verify } from '@node-rs/argon2'
 import { sql } from 'drizzle-orm'
 import { createError, getRequestIP, readBody } from 'h3'
-import { loginSchema } from '../../../../shared/schemas/auth'
+import { adminLoginSchema } from '../../../../shared/schemas/auth'
 import { admins } from '../../../database/schema'
 import { throwValidationError } from '../../../utils/api-errors'
 import { loginAdmin } from '../../../utils/auth'
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const parsed = loginSchema.safeParse(await readBody(event).catch(() => null))
+  const parsed = adminLoginSchema.safeParse(await readBody(event).catch(() => null))
   if (!parsed.success) {
     throwValidationError(parsed.error)
   }

@@ -6,7 +6,7 @@ definePageMeta({ layout: 'auth' })
 useHead({ title: 'Entrar | Férias do Servidor' })
 
 const { session, fetchSession, login } = useAuth()
-const form = reactive({ email: '', password: '' })
+const form = reactive({ email: '' })
 const errorMessage = ref('')
 const loading = ref(false)
 const isDev = import.meta.dev
@@ -24,7 +24,7 @@ async function submit(): Promise<void> {
   loading.value = true
 
   try {
-    await login(form.email, form.password)
+    await login(form.email)
     await navigateTo('/agenda')
   } catch (error) {
     const normalized = normalizeApiError(error)
@@ -43,7 +43,7 @@ async function submit(): Promise<void> {
       Entrar como servidor
     </h2>
     <p class="mt-1 text-sm text-slate-600">
-      Informe seu e-mail institucional e sua senha.
+      Informe seu e-mail institucional para entrar.
     </p>
 
     <form class="mt-5 space-y-4" @submit.prevent="submit">
@@ -59,20 +59,6 @@ async function submit(): Promise<void> {
           autocomplete="username"
           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
           placeholder="seu.email@example.com"
-        >
-      </div>
-
-      <div>
-        <label for="employee-password" class="mb-1 block text-sm font-medium text-slate-700">
-          Senha
-        </label>
-        <input
-          id="employee-password"
-          v-model="form.password"
-          type="password"
-          required
-          autocomplete="current-password"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-600"
         >
       </div>
 
@@ -95,7 +81,7 @@ async function submit(): Promise<void> {
     </form>
 
     <div v-if="isDev" class="mt-5 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-      Demonstração: <strong>maria@example.com</strong> / <strong>servidor123</strong>
+      Demonstração: <strong>maria@example.com</strong>
     </div>
 
     <div class="mt-5 border-t border-slate-200 pt-4 text-center">

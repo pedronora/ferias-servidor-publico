@@ -45,11 +45,11 @@ describe('useAuth', () => {
     requestFetchMock.mockResolvedValue(employeeSession)
 
     const { login } = useAuth()
-    await login('maria@example.com', 'servidor123')
+    await login('maria@example.com')
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/login', {
       method: 'POST',
-      body: { email: 'maria@example.com', password: 'servidor123' },
+      body: { email: 'maria@example.com' },
     })
     expect(requestFetchMock).toHaveBeenCalledWith('/api/auth/session')
   })

@@ -1,7 +1,6 @@
-import { verify } from '@node-rs/argon2'
 import { and, eq, sql } from 'drizzle-orm'
 import { createError, getRequestIP, readBody } from 'h3'
-import { loginSchema } from '../../../shared/schemas/auth'
+import { employeeLoginSchema } from '../../../shared/schemas/auth'
 import { employees } from '../../database/schema'
 import { throwValidationError } from '../../utils/api-errors'
 import { loginEmployee } from '../../utils/auth'
@@ -24,7 +23,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const parsed = loginSchema.safeParse(await readBody(event).catch(() => null))
+  const parsed = employeeLoginSchema.safeParse(await readBody(event).catch(() => null))
   if (!parsed.success) {
     throwValidationError(parsed.error)
   }
@@ -39,14 +38,10 @@ export default defineEventHandler(async (event) => {
     ))
     .limit(1)
 
-  const validPassword = employee
-    ? await verify(employee.passwordHash, parsed.data.password).catch(() => false)
-    : false
-
-  if (!employee || !validPassword) {
+  if (!employee) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'E-mail ou senha inválidos.',
+      statusMessage: 'Não foi possível entrar com este e-mail.',
     })
   }
 

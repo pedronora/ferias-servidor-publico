@@ -95,14 +95,14 @@ describe('API de autenticação, agenda e administração', async () => {
     const passwordHash = await hash(PASSWORD)
 
     const employee = await pool.query<{ id: string }>(
-      'insert into employees (name, email, password_hash) values ($1, $2, $3) returning id',
-      ['Servidor API', employeeEmail, passwordHash],
+      'insert into employees (name, email) values ($1, $2) returning id',
+      ['Servidor API', employeeEmail],
     )
     employeeId = employee.rows[0]!.id
 
     const other = await pool.query<{ id: string }>(
-      'insert into employees (name, email, password_hash) values ($1, $2, $3) returning id',
-      ['Outro Servidor API', otherEmail, passwordHash],
+      'insert into employees (name, email) values ($1, $2) returning id',
+      ['Outro Servidor API', otherEmail],
     )
     otherEmployeeId = other.rows[0]!.id
 
@@ -130,33 +130,27 @@ describe('API de autenticação, agenda e administração', async () => {
   it('bloqueia requisição sem origem confiável', async () => {
     const response = await request('/api/auth/login', {
       method: 'POST',
-      body: { email: employeeEmail, password: PASSWORD },
+      body: { email: employeeEmail },
       withOrigin: false,
     })
 
     expect(response.status).toBe(403)
   })
 
-  it('usa a mesma mensagem para credenciais inválidas', async () => {
-    const wrongPassword = await request('/api/auth/login', {
-      method: 'POST',
-      body: { email: employeeEmail, password: 'senha-errada' },
-    })
+  it('rejeita e-mail desconhecido', async () => {
     const unknownEmail = await request('/api/auth/login', {
       method: 'POST',
-      body: { email: `test-api-unknown-${suffix}@example.com`, password: PASSWORD },
+      body: { email: `test-api-unknown-${suffix}@example.com` },
     })
 
-    expect(wrongPassword.status).toBe(401)
     expect(unknownEmail.status).toBe(401)
-    expect(messageOf(wrongPassword)).toBe('E-mail ou senha inválidos.')
-    expect(messageOf(unknownEmail)).toBe('E-mail ou senha inválidos.')
+    expect(messageOf(unknownEmail)).toBe('Não foi possível entrar com este e-mail.')
   })
 
-  it('autentica o servidor e devolve a sessão', async () => {
+  it('autentica o servidor apenas com o e-mail', async () => {
     const login = await request('/api/auth/login', {
       method: 'POST',
-      body: { email: employeeEmail, password: PASSWORD },
+      body: { email: employeeEmail },
     })
 
     expect(login.status).toBe(200)
