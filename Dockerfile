@@ -1,4 +1,4 @@
-FROM node:24.19-alpine AS base
+FROM node:26.12-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
@@ -13,7 +13,7 @@ COPY . .
 RUN pnpm build \
   && pnpm build:scripts
 
-FROM node:24.19-alpine AS runtime
+FROM node:26.12-alpine AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
