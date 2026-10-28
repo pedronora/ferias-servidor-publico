@@ -8,7 +8,7 @@ const props = defineProps<{
 const presentation = computed(() => {
   switch (props.status) {
     case 'confirmed':
-      return { label: 'Confirmada', classes: 'bg-emerald-100 text-emerald-800 ring-emerald-200' }
+      return { label: 'Solicitado', classes: 'bg-emerald-100 text-emerald-800 ring-emerald-200' }
     case 'partial':
       return { label: 'Parcial', classes: 'bg-amber-100 text-amber-800 ring-amber-200' }
     case 'draft':

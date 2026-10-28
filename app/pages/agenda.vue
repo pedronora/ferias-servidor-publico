@@ -101,7 +101,7 @@ async function confirmSchedule(): Promise<void> {
     })
     applyResponse(response)
     showConfirm.value = false
-    successMessage.value = 'Agenda confirmada com sucesso.'
+    successMessage.value = 'Pedido de férias submetido com sucesso.'
   } catch (requestError) {
     handleRequestError(requestError)
   } finally {
@@ -194,7 +194,7 @@ async function confirmSchedule(): Promise<void> {
         v-if="!canEdit"
         class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
       >
-        Sua agenda está confirmada e não pode mais ser alterada. Em caso de necessidade, procure a administração.
+        Seu pedido de férias foi submetido e não pode mais ser alterado. A análise será feita pela administração em conversa individual posteriormente.
       </div>
 
       <div

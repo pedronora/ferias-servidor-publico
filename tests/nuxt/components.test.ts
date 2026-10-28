@@ -20,7 +20,7 @@ const rules: VacationRules = {
 
 describe('StatusBadge', () => {
   it.each([
-    ['confirmed', 'Confirmada'],
+    ['confirmed', 'Solicitado'],
     ['partial', 'Parcial'],
     ['draft', 'Rascunho'],
     ['empty', 'Sem agenda'],

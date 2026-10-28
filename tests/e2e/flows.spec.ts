@@ -7,16 +7,16 @@ test('redireciona visitante para o login do servidor', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Entrar como servidor' })).toBeVisible()
 })
 
-test('servidor com agenda confirmada visualiza a escala em modo somente leitura', async ({ page }) => {
+test('servidor com pedido submetido visualiza a escala em modo somente leitura', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('E-mail').fill('maria@example.com')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(page.getByRole('heading', { name: /Olá, Maria Souza/ })).toBeVisible()
-  await expect(page.getByText('Confirmada', { exact: true })).toBeVisible()
+  await expect(page.getByText('Solicitado', { exact: true })).toBeVisible()
   await expect(page.getByText(/30\/30 dias/)).toBeVisible()
-  await expect(page.getByText('Sua agenda está confirmada e não pode mais ser alterada.')).toBeVisible()
+  await expect(page.getByText('Seu pedido de férias foi submetido e não pode mais ser alterado. A análise será feita pela administração em conversa individual posteriormente.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Sair' }).click()
@@ -60,7 +60,7 @@ test('admin consulta servidores, abre agenda e gera relatório com CSV', async (
 
   await expect(page).toHaveURL(/\/admin\/servidores\/[0-9a-f-]+$/)
   await expect(page.getByRole('heading', { name: 'Maria Souza' })).toBeVisible()
-  await expect(page.getByText('Confirmada', { exact: true })).toBeVisible()
+  await expect(page.getByText('Solicitado', { exact: true })).toBeVisible()
 
   await page.getByLabel('Aplicar override').check()
   await expect(page.getByLabel('Justificativa do override')).toBeVisible()
