@@ -1,4 +1,10 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function expectNoHorizontalScroll(page: Page): Promise<void> {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+
+  expect(overflow).toBeLessThanOrEqual(0)
+}
 
 test('redireciona visitante para o login do servidor', async ({ page }) => {
   await page.goto('/agenda')
@@ -42,17 +48,33 @@ test('servidor com rascunho salva e gerencia períodos', async ({ page }) => {
   await expect(page.getByText('Rascunho salvo com sucesso.')).toBeVisible()
 })
 
+test('admin alterna a visibilidade da senha no login', async ({ page }) => {
+  await page.goto('/admin/login')
+
+  const password = page.getByLabel('Senha', { exact: true })
+  await expect(password).toHaveAttribute('type', 'password')
+  await password.fill('admin12345')
+
+  await page.getByRole('button', { name: 'Mostrar senha' }).click()
+  await expect(password).toHaveAttribute('type', 'text')
+  await expect(password).toHaveValue('admin12345')
+
+  await page.getByRole('button', { name: 'Ocultar senha' }).click()
+  await expect(password).toHaveAttribute('type', 'password')
+  await expect(password).toHaveValue('admin12345')
+})
+
 test('admin consulta servidores, abre agenda e gera relatório com CSV', async ({ page }) => {
   await page.goto('/admin/login')
   await page.getByLabel('E-mail').fill('admin@example.com')
-  await page.getByLabel('Senha').fill('admin12345')
+  await page.getByLabel('Senha', { exact: true }).fill('admin12345')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByRole('heading', { name: 'Servidores' })).toBeVisible()
-  await expect(page.getByText('Maria Souza')).toBeVisible()
-  await expect(page.getByText('João Pereira')).toBeVisible()
-  await expect(page.getByText('Ana Lima')).toBeVisible()
+  await expect(page.getByRole('table').getByText('Maria Souza')).toBeVisible()
+  await expect(page.getByRole('table').getByText('João Pereira')).toBeVisible()
+  await expect(page.getByRole('table').getByText('Ana Lima')).toBeVisible()
 
   await page.getByRole('row', { name: /Maria Souza/ })
     .getByRole('link', { name: 'Abrir agenda' })
@@ -82,7 +104,7 @@ test('admin consulta servidores, abre agenda e gera relatório com CSV', async (
 test('admin cadastra, edita, desativa e reativa servidor', async ({ page }) => {
   await page.goto('/admin/login')
   await page.getByLabel('E-mail').fill('admin@example.com')
-  await page.getByLabel('Senha').fill('admin12345')
+  await page.getByLabel('Senha', { exact: true }).fill('admin12345')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/admin$/)
@@ -223,4 +245,37 @@ test('confirma a agenda com as alterações atuais sem salvar o rascunho antes',
 
   await expect(page.getByText('Pedido de férias submetido com sucesso.')).toBeVisible()
   await expect(page.getByText('Solicitado', { exact: true })).toBeVisible()
+})
+
+test.describe('telas pequenas', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('admin vê servidores e relatório em cards, sem rolagem horizontal', async ({ page }) => {
+    const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+    const login = await page.request.post(`${baseURL}/api/admin/auth/login`, {
+      headers: { origin: baseURL },
+      data: { email: 'admin@example.com', password: 'admin12345' },
+    })
+    expect(login.ok()).toBeTruthy()
+
+    await page.goto('/admin')
+    await expect(page.getByRole('heading', { name: 'Servidores' })).toBeVisible()
+    await expect(page.getByRole('table')).toHaveCount(0)
+    await expect(page.getByRole('list').getByText('Maria Souza')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Abrir agenda' }).first()).toBeVisible()
+    await expectNoHorizontalScroll(page)
+
+    await page.getByRole('link', { name: 'Relatório' }).click()
+    await expect(page).toHaveURL(/\/admin\/relatorio$/)
+    await expect(page.getByRole('heading', { name: 'Relatório consolidado' })).toBeVisible()
+    await expect(page.getByRole('table')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Coincidências de férias' })).toBeVisible()
+
+    const scheduleCards = page.getByRole('list').first()
+    const coincidenceCards = page.getByRole('list').nth(1)
+    await expect(scheduleCards.getByRole('link', { name: 'João Pereira' })).toBeVisible()
+    await expect(coincidenceCards.getByText('Servidor A').first()).toBeVisible()
+    await expect(coincidenceCards.getByText('João Pereira').first()).toBeVisible()
+    await expectNoHorizontalScroll(page)
+  })
 })

@@ -161,7 +161,7 @@ async function reactivate(employee: EmployeeSummary): Promise<void> {
     </div>
 
     <div v-else-if="data" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="overflow-x-auto">
+      <div class="hidden lg:block">
         <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -223,6 +223,65 @@ async function reactivate(employee: EmployeeSummary): Promise<void> {
           </tbody>
         </table>
       </div>
+
+      <ul class="divide-y divide-slate-100 lg:hidden">
+        <li v-for="employee in data.employees" :key="employee.id" class="space-y-3 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                {{ employee.name }}
+                <span
+                  v-if="!employee.isActive"
+                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200"
+                >
+                  Inativo
+                </span>
+              </p>
+              <p class="truncate text-xs text-slate-500">
+                {{ employee.email }}
+              </p>
+            </div>
+            <StatusBadge :status="employee.status" />
+          </div>
+
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Períodos
+            </p>
+            <template v-if="employee.periods.length > 0">
+              <p v-for="period in employee.periods" :key="period.id" class="text-xs text-slate-600">
+                {{ formatDateRangeBR(period.startDate, period.endDate) }}
+              </p>
+            </template>
+            <p v-else class="text-xs text-slate-400">
+              Nenhum período
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm font-medium text-slate-900">
+              {{ employee.totalDays }} dias
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <NuxtLink
+                :to="`/admin/servidores/${employee.id}`"
+                class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white"
+              >
+                Abrir agenda
+              </NuxtLink>
+              <button
+                v-if="!employee.isActive"
+                type="button"
+                class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                :disabled="reactivatingId === employee.id"
+                @click="reactivate(employee)"
+              >
+                {{ reactivatingId === employee.id ? 'Reativando...' : 'Reativar' }}
+              </button>
+            </div>
+          </div>
+        </li>
+      </ul>
     </div>
   </section>
 </template>
