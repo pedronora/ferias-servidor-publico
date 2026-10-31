@@ -153,7 +153,7 @@ function printReport(): void {
         <h2 class="text-lg font-semibold text-slate-900">
           Situação por servidor
         </h2>
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-3 hidden lg:block print:block">
           <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
@@ -187,6 +187,43 @@ function printReport(): void {
             </tbody>
           </table>
         </div>
+
+        <ul class="mt-3 divide-y divide-slate-100 lg:hidden print:hidden">
+          <li v-for="employee in data.employees" :key="employee.id" class="space-y-2 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <NuxtLink
+                  :to="`/admin/servidores/${employee.id}`"
+                  class="font-medium text-brand-700 hover:underline"
+                >
+                  {{ employee.name }}
+                </NuxtLink>
+                <p class="truncate text-xs text-slate-500">
+                  {{ employee.email }}
+                </p>
+              </div>
+              <StatusBadge :status="employee.status" />
+            </div>
+
+            <p class="text-sm font-medium text-slate-900">
+              {{ employee.totalDays }}/{{ data.settings.totalDays }} dias
+            </p>
+
+            <div>
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Períodos
+              </p>
+              <template v-if="employee.periods.length > 0">
+                <p v-for="period in employee.periods" :key="period.id" class="text-xs text-slate-600">
+                  {{ formatDateRangeBR(period.startDate, period.endDate) }}
+                </p>
+              </template>
+              <p v-else class="text-xs text-slate-400">
+                Nenhum período
+              </p>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -201,28 +238,66 @@ function printReport(): void {
           Nenhuma coincidência encontrada.
         </p>
 
-        <div v-else class="mt-3 overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th scope="col" class="px-3 py-2 font-semibold">Servidor A</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Servidor B</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Período sobreposto</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Dias</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="coincidence in data.coincidences" :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`">
-                <td class="px-3 py-2">{{ coincidence.employeeA.name }}</td>
-                <td class="px-3 py-2">{{ coincidence.employeeB.name }}</td>
-                <td class="px-3 py-2">
+        <template v-else>
+          <div class="mt-3 hidden lg:block print:block">
+            <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" class="px-3 py-2 font-semibold">Servidor A</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Servidor B</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Período sobreposto</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Dias</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="coincidence in data.coincidences" :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`">
+                  <td class="px-3 py-2">{{ coincidence.employeeA.name }}</td>
+                  <td class="px-3 py-2">{{ coincidence.employeeB.name }}</td>
+                  <td class="px-3 py-2">
+                    {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
+                  </td>
+                  <td class="px-3 py-2 font-medium">{{ coincidence.days }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ul class="mt-3 divide-y divide-slate-100 lg:hidden print:hidden">
+            <li
+              v-for="coincidence in data.coincidences"
+              :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`"
+              class="space-y-2 py-3"
+            >
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Servidor A
+                  </p>
+                  <p class="text-sm text-slate-900">
+                    {{ coincidence.employeeA.name }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Servidor B
+                  </p>
+                  <p class="text-sm text-slate-900">
+                    {{ coincidence.employeeB.name }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm text-slate-600">
                   {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
-                </td>
-                <td class="px-3 py-2 font-medium">{{ coincidence.days }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </p>
+                <p class="text-sm font-medium text-slate-900">
+                  {{ coincidence.days }} dias
+                </p>
+              </div>
+            </li>
+          </ul>
+        </template>
       </div>
     </template>
   </section>
