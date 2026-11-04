@@ -1,7 +1,7 @@
 FROM node:24.19-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
+RUN npm install --global pnpm@11.22.0
 WORKDIR /app
 
 FROM base AS deps
@@ -23,7 +23,6 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable \
-  && corepack prepare pnpm@11.22.0 --activate \
   && pnpm install --prod --frozen-lockfile --ignore-scripts \
   && rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
