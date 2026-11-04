@@ -22,7 +22,7 @@ ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable \
+RUN npm install --global pnpm@11.22.0 \
   && pnpm install --prod --frozen-lockfile --ignore-scripts \
   && rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
