@@ -1,4 +1,4 @@
-FROM node:24.19-alpine AS base
+FROM node:26.13-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN npm install --global pnpm@11.22.0
@@ -13,7 +13,7 @@ COPY . .
 RUN pnpm build \
   && pnpm build:scripts
 
-FROM node:24.19-alpine AS runtime
+FROM node:26.13-alpine AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
@@ -22,7 +22,7 @@ ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable \
+RUN npm install --global pnpm@11.22.0 \
   && pnpm install --prod --frozen-lockfile --ignore-scripts \
   && rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
