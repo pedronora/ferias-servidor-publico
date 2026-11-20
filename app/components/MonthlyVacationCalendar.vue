@@ -225,7 +225,7 @@ function dayLabel(day: MonthDay & { names: string[] }): string {
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-200 print:overflow-visible print:border-0">
-        <table class="min-w-[700px] table-fixed border-collapse text-xs print:min-w-0 print:text-[9px]">
+        <table class="w-full min-w-175 table-fixed border-collapse text-xs print:min-w-0 print:text-[9px]">
           <caption class="sr-only">
             Calendário mensal de férias
           </caption>
