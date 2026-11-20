@@ -133,7 +133,7 @@ As rotas de escrita exigem `Origin` compatível com `NUXT_PUBLIC_APP_URL` (ou `S
 
 - `/login` e `/agenda`: autenticação do servidor somente por e-mail, montagem dos períodos, salvamento de rascunho e confirmação da agenda.
 - `/admin/login`, `/admin`, `/admin/servidores/novo` e `/admin/servidores/:id`: autenticação administrativa, busca, cadastro, edição, desativação/reativação de servidores e edição da agenda com override justificado.
-- `/admin/relatorio`: consolidado por servidor, coincidências de férias, impressão e exportação CSV.
+- `/admin/relatorio`: consolidado por servidor, visão anual por semana, calendário mensal, coincidências de férias, impressão e exportação CSV.
 - As páginas protegidas usam middleware de sessão; a raiz redireciona para `/agenda` ou `/login` conforme a autenticação.
 - Os campos de data usam o formato brasileiro `DD/MM/AAAA`.
 - A interface reutiliza as mesmas regras de `shared/rules` e trata os erros estruturados da API.

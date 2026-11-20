@@ -94,6 +94,26 @@ test('admin consulta servidores, abre agenda e gera relatório com CSV', async (
   await expect(page.getByRole('heading', { name: 'Coincidências de férias' })).toBeVisible()
   await expect(page.getByRole('row', { name: /João Pereira.*Maria Souza/ }).first()).toBeVisible()
 
+  await page.getByRole('tab', { name: 'Visão anual' }).click()
+  await expect(page.getByRole('heading', { name: 'Visão anual' })).toBeVisible()
+  const annualTable = page.getByRole('table', { name: 'Visão anual de férias por semana' })
+  await expect(annualTable.getByText('Maria Souza')).toBeVisible()
+  await expect(annualTable.getByText('Pessoas ausentes na semana')).toBeVisible()
+  await expectNoHorizontalScroll(page)
+
+  await page.getByRole('tab', { name: 'Calendário mensal' }).click()
+  await expect(page.getByRole('heading', { name: 'Calendário mensal' })).toBeVisible()
+  const monthlyTable = page.getByRole('table', { name: 'Calendário mensal de férias' })
+  await expect(page.getByText('Janeiro de 2027')).toBeVisible()
+  await expect(monthlyTable.getByText('Maria Souza').first()).toBeVisible()
+  await expect(page.getByText('Pessoas com férias no mês:')).toBeVisible()
+  await expectNoHorizontalScroll(page)
+
+  await page.getByLabel('Mês', { exact: true }).selectOption({ label: 'Julho' })
+  await expect(page.getByText('Nenhum servidor com férias neste mês.')).toBeVisible()
+  await page.getByLabel('Incluir rascunhos e períodos parciais').check()
+  await expect(monthlyTable.getByText('Ana Lima').first()).toBeVisible()
+
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Exportar CSV' }).click()
   const download = await downloadPromise

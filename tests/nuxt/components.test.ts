@@ -1,13 +1,16 @@
 import { mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import AnnualVacationCalendar from '../../app/components/AnnualVacationCalendar.vue'
 import ConfirmDialog from '../../app/components/ConfirmDialog.vue'
 import DateRangePicker from '../../app/components/DateRangePicker.vue'
+import MonthlyVacationCalendar from '../../app/components/MonthlyVacationCalendar.vue'
 import PeriodsEditor from '../../app/components/PeriodsEditor.vue'
 import StatusBadge from '../../app/components/StatusBadge.vue'
 import ValidationList from '../../app/components/ValidationList.vue'
 import type { PeriodInput } from '../../shared/schemas/schedule'
 import type { VacationRules } from '../../shared/rules/vacation'
+import type { EmployeeSummary } from '../../shared/types/api'
 
 const rules: VacationRules = {
   cycleStart: '2027-01-01',
@@ -278,5 +281,166 @@ describe('DateRangePicker', () => {
       startDate: '',
       endDate: '',
     })
+  })
+})
+
+function calendarPeriod(id: string, startDate: string, endDate: string): EmployeeSummary['periods'][number] {
+  return {
+    id,
+    startDate,
+    endDate,
+    status: 'confirmed',
+    adminOverride: false,
+    overrideReason: null,
+    confirmedAt: null,
+  }
+}
+
+const calendarEmployees: EmployeeSummary[] = [
+  {
+    id: 'maria',
+    name: 'Maria Souza',
+    email: 'maria@example.com',
+    isActive: true,
+    totalDays: 20,
+    status: 'confirmed',
+    periods: [
+      calendarPeriod('maria-1', '2027-01-10', '2027-01-19'),
+      calendarPeriod('maria-2', '2027-02-04', '2027-02-13'),
+    ],
+  },
+  {
+    id: 'joao',
+    name: 'João Pereira',
+    email: 'joao@example.com',
+    isActive: true,
+    totalDays: 10,
+    status: 'confirmed',
+    periods: [calendarPeriod('joao-1', '2027-01-10', '2027-01-19')],
+  },
+  {
+    id: 'ana',
+    name: 'Ana Lima',
+    email: 'ana@example.com',
+    isActive: true,
+    totalDays: 0,
+    status: 'empty',
+    periods: [],
+  },
+]
+
+describe('AnnualVacationCalendar', () => {
+  function mountCalendar(employees = calendarEmployees) {
+    return mount(AnnualVacationCalendar, {
+      props: {
+        employees,
+        cycleStart: '2027-01-01',
+        cycleEnd: '2027-12-31',
+      },
+    })
+  }
+
+  it('renderiza os meses, os servidores e a linha de ausências', () => {
+    const wrapper = mountCalendar()
+
+    expect(wrapper.text()).toContain('Jan')
+    expect(wrapper.text()).toContain('Dez')
+    expect(wrapper.text()).toContain('Maria Souza')
+    expect(wrapper.text()).toContain('João Pereira')
+    expect(wrapper.text()).toContain('Pessoas ausentes na semana')
+  })
+
+  it('destaca as semanas com férias e conta as pessoas ausentes', () => {
+    const wrapper = mountCalendar()
+    const cells = wrapper.findAll('td')
+
+    const mariaCell = cells.find(cell =>
+      cell.attributes('aria-label') === 'Maria Souza — Semana de 04/01/2027 a 10/01/2027: 1 dia(s) de férias')
+    const countCell = cells.find(cell =>
+      cell.attributes('aria-label') === 'Semana de 04/01/2027 a 10/01/2027: 2 pessoa(s) ausente(s)')
+
+    expect(mariaCell?.classes()).toContain('bg-brand-600')
+    expect(countCell?.text()).toBe('2')
+  })
+
+  it('mostra o estado vazio sem servidores', () => {
+    const wrapper = mountCalendar([])
+
+    expect(wrapper.text()).toContain('Nenhum servidor ativo para exibir.')
+  })
+})
+
+describe('MonthlyVacationCalendar', () => {
+  function mountCalendar(options: {
+    employees?: EmployeeSummary[]
+    cycleStart?: string
+    cycleEnd?: string
+    initialMonth?: { year: number, month: number }
+  } = {}) {
+    return mount(MonthlyVacationCalendar, {
+      props: {
+        employees: options.employees ?? calendarEmployees,
+        cycleStart: options.cycleStart ?? '2027-01-01',
+        cycleEnd: options.cycleEnd ?? '2027-12-31',
+        initialMonth: options.initialMonth ?? { year: 2027, month: 1 },
+      },
+    })
+  }
+
+  it('mostra o mês inicial, os nomes e o total de pessoas', () => {
+    const wrapper = mountCalendar()
+
+    expect(wrapper.text()).toContain('Janeiro de 2027')
+    expect(wrapper.text()).toContain('Maria Souza')
+    expect(wrapper.text()).toContain('João Pereira')
+    expect(wrapper.findAll('p').find(paragraph => paragraph.text().startsWith('Pessoas com férias no mês:'))?.text())
+      .toBe('Pessoas com férias no mês: 2')
+
+    const dayCell = wrapper.findAll('td').find(cell =>
+      cell.attributes('aria-label') === '10/01/2027: Maria Souza, João Pereira')
+    expect(dayCell?.classes()).toContain('bg-brand-50')
+  })
+
+  it('navega entre os meses e respeita os limites do ciclo', async () => {
+    const wrapper = mountCalendar()
+    const previous = wrapper.get('button[aria-label="Mês anterior"]')
+
+    expect(previous.attributes('disabled')).toBeDefined()
+
+    await wrapper.get('button[aria-label="Próximo mês"]').trigger('click')
+
+    expect(wrapper.text()).toContain('Fevereiro de 2027')
+    expect(wrapper.text()).toContain('Maria Souza')
+    expect(wrapper.get('button[aria-label="Mês anterior"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('button[aria-label="Mês anterior"]').trigger('click')
+
+    expect(wrapper.text()).toContain('Janeiro de 2027')
+  })
+
+  it('ajusta o mês ao trocar o ano', async () => {
+    const wrapper = mountCalendar({
+      cycleStart: '2026-11-01',
+      cycleEnd: '2027-02-28',
+      initialMonth: { year: 2026, month: 11 },
+    })
+
+    expect(wrapper.text()).toContain('Novembro de 2026')
+
+    await wrapper.get('#calendar-year').setValue('2027')
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Janeiro de 2027')
+  })
+
+  it('mostra o estado vazio quando não há férias no mês', async () => {
+    const wrapper = mountCalendar()
+
+    await wrapper.get('#calendar-month').setValue('7')
+
+    expect(wrapper.text()).toContain('Julho de 2027')
+    expect(wrapper.text()).toContain('Nenhum servidor com férias neste mês.')
+    expect(wrapper.findAll('p').find(paragraph => paragraph.text().startsWith('Pessoas com férias no mês:'))?.text())
+      .toBe('Pessoas com férias no mês: 0')
   })
 })
