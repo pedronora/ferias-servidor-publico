@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { EmployeeSummary, ReportResponse, ScheduleStatus } from '~~/shared/types/api'
+import { resolveInitialMonth } from '~~/shared/utils/calendar'
 import { formatDateRangeBR } from '~~/shared/utils/date'
 
 definePageMeta({ middleware: 'admin', layout: 'admin' })
@@ -16,6 +17,44 @@ const statusLabels: Record<ScheduleStatus, string> = {
   partial: 'Parcial',
   confirmed: 'Confirmada',
 }
+
+type ReportTab = 'summary' | 'annual' | 'monthly'
+
+const tabs: Array<{ id: ReportTab, label: string }> = [
+  { id: 'summary', label: 'Resumo' },
+  { id: 'annual', label: 'Visão anual' },
+  { id: 'monthly', label: 'Calendário mensal' },
+]
+const activeTab = ref<ReportTab>('summary')
+const includeDrafts = ref(false)
+
+const calendarEmployees = computed<EmployeeSummary[]>(() => {
+  const employees = data.value?.employees ?? []
+
+  if (includeDrafts.value) {
+    return employees
+  }
+
+  return employees.map(employee => ({
+    ...employee,
+    periods: employee.periods.filter(period => period.status === 'confirmed'),
+  }))
+})
+
+const initialMonth = computed(() => {
+  const report = data.value
+
+  if (!report) {
+    const today = new Date()
+    return { year: today.getFullYear(), month: today.getMonth() + 1 }
+  }
+
+  return resolveInitialMonth(
+    report.generatedAt,
+    report.settings.cycleStart,
+    report.settings.cycleEnd,
+  )
+})
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
@@ -130,174 +169,273 @@ function printReport(): void {
     </div>
 
     <template v-else-if="data">
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Servidores ativos</p>
-          <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.employees }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Com agenda</p>
-          <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.withSchedule }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Confirmadas</p>
-          <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.confirmed }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Dias marcados</p>
-          <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.totalVacationDays }}</p>
-        </div>
+      <div
+        class="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 print:hidden"
+        role="tablist"
+        aria-label="Seções do relatório"
+      >
+        <button
+          v-for="tab in tabs"
+          :id="`report-tab-${tab.id}`"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.id"
+          :aria-controls="`report-panel-${tab.id}`"
+          class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="activeTab === tab.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
       </div>
 
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">
-          Situação por servidor
-        </h2>
-        <div class="mt-3 hidden lg:block print:block">
-          <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th scope="col" class="px-3 py-2 font-semibold">Servidor</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Status</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Dias</th>
-                <th scope="col" class="px-3 py-2 font-semibold">Períodos</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="employee in data.employees" :key="employee.id">
-                <td class="px-3 py-3">
-                  <NuxtLink
-                    :to="`/admin/servidores/${employee.id}`"
-                    class="font-medium text-brand-700 hover:underline"
-                  >
-                    {{ employee.name }}
-                  </NuxtLink>
-                  <p class="text-xs text-slate-500">{{ employee.email }}</p>
-                </td>
-                <td class="px-3 py-3">
-                  <StatusBadge :status="employee.status" />
-                </td>
-                <td class="px-3 py-3 font-medium text-slate-900">
-                  {{ employee.totalDays }}/{{ data.settings.totalDays }}
-                </td>
-                <td class="px-3 py-3 text-xs text-slate-600">
-                  {{ periodsText(employee) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <ul class="mt-3 divide-y divide-slate-100 lg:hidden print:hidden">
-          <li v-for="employee in data.employees" :key="employee.id" class="space-y-2 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <NuxtLink
-                  :to="`/admin/servidores/${employee.id}`"
-                  class="font-medium text-brand-700 hover:underline"
-                >
-                  {{ employee.name }}
-                </NuxtLink>
-                <p class="truncate text-xs text-slate-500">
-                  {{ employee.email }}
-                </p>
-              </div>
-              <StatusBadge :status="employee.status" />
-            </div>
-
-            <p class="text-sm font-medium text-slate-900">
-              {{ employee.totalDays }}/{{ data.settings.totalDays }} dias
-            </p>
-
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Períodos
-              </p>
-              <template v-if="employee.periods.length > 0">
-                <p v-for="period in employee.periods" :key="period.id" class="text-xs text-slate-600">
-                  {{ formatDateRangeBR(period.startDate, period.endDate) }}
-                </p>
-              </template>
-              <p v-else class="text-xs text-slate-400">
-                Nenhum período
-              </p>
-            </div>
-          </li>
-        </ul>
+      <div
+        v-if="activeTab !== 'summary'"
+        class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between print:hidden"
+      >
+        <p class="text-slate-600">
+          <template v-if="includeDrafts">
+            Exibindo todos os períodos, incluindo rascunhos e parciais.
+          </template>
+          <template v-else>
+            Exibindo apenas pedidos submetidos.
+          </template>
+        </p>
+        <label for="include-drafts" class="flex items-center gap-2 font-medium text-slate-700">
+          <input
+            id="include-drafts"
+            v-model="includeDrafts"
+            type="checkbox"
+            class="size-4 rounded border-slate-300"
+          >
+          Incluir rascunhos e períodos parciais
+        </label>
       </div>
 
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">
-          Coincidências de férias
-        </h2>
-        <p class="mt-1 text-sm text-slate-600">
-          Pares de servidores com períodos sobrepostos no ciclo.
-        </p>
+      <div
+        v-show="activeTab === 'summary'"
+        id="report-panel-summary"
+        role="tabpanel"
+        aria-labelledby="report-tab-summary"
+        class="space-y-6"
+      >
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Servidores ativos</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.employees }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Com agenda</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.withSchedule }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Confirmadas</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.confirmed }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Dias marcados</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{{ data.summary.totalVacationDays }}</p>
+          </div>
+        </div>
 
-        <p v-if="data.coincidences.length === 0" class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
-          Nenhuma coincidência encontrada.
-        </p>
-
-        <template v-else>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">
+            Situação por servidor
+          </h2>
           <div class="mt-3 hidden lg:block print:block">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th scope="col" class="px-3 py-2 font-semibold">Servidor A</th>
-                  <th scope="col" class="px-3 py-2 font-semibold">Servidor B</th>
-                  <th scope="col" class="px-3 py-2 font-semibold">Período sobreposto</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Servidor</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Status</th>
                   <th scope="col" class="px-3 py-2 font-semibold">Dias</th>
+                  <th scope="col" class="px-3 py-2 font-semibold">Períodos</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="coincidence in data.coincidences" :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`">
-                  <td class="px-3 py-2">{{ coincidence.employeeA.name }}</td>
-                  <td class="px-3 py-2">{{ coincidence.employeeB.name }}</td>
-                  <td class="px-3 py-2">
-                    {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
+                <tr v-for="employee in data.employees" :key="employee.id">
+                  <td class="px-3 py-3">
+                    <NuxtLink
+                      :to="`/admin/servidores/${employee.id}`"
+                      class="font-medium text-brand-700 hover:underline"
+                    >
+                      {{ employee.name }}
+                    </NuxtLink>
+                    <p class="text-xs text-slate-500">{{ employee.email }}</p>
                   </td>
-                  <td class="px-3 py-2 font-medium">{{ coincidence.days }}</td>
+                  <td class="px-3 py-3">
+                    <StatusBadge :status="employee.status" />
+                  </td>
+                  <td class="px-3 py-3 font-medium text-slate-900">
+                    {{ employee.totalDays }}/{{ data.settings.totalDays }}
+                  </td>
+                  <td class="px-3 py-3 text-xs text-slate-600">
+                    {{ periodsText(employee) }}
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <ul class="mt-3 divide-y divide-slate-100 lg:hidden print:hidden">
-            <li
-              v-for="coincidence in data.coincidences"
-              :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`"
-              class="space-y-2 py-3"
-            >
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Servidor A
-                  </p>
-                  <p class="text-sm text-slate-900">
-                    {{ coincidence.employeeA.name }}
-                  </p>
-                </div>
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Servidor B
-                  </p>
-                  <p class="text-sm text-slate-900">
-                    {{ coincidence.employeeB.name }}
+            <li v-for="employee in data.employees" :key="employee.id" class="space-y-2 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <NuxtLink
+                    :to="`/admin/servidores/${employee.id}`"
+                    class="font-medium text-brand-700 hover:underline"
+                  >
+                    {{ employee.name }}
+                  </NuxtLink>
+                  <p class="truncate text-xs text-slate-500">
+                    {{ employee.email }}
                   </p>
                 </div>
+                <StatusBadge :status="employee.status" />
               </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-sm text-slate-600">
-                  {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
+              <p class="text-sm font-medium text-slate-900">
+                {{ employee.totalDays }}/{{ data.settings.totalDays }} dias
+              </p>
+
+              <div>
+                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Períodos
                 </p>
-                <p class="text-sm font-medium text-slate-900">
-                  {{ coincidence.days }} dias
+                <template v-if="employee.periods.length > 0">
+                  <p v-for="period in employee.periods" :key="period.id" class="text-xs text-slate-600">
+                    {{ formatDateRangeBR(period.startDate, period.endDate) }}
+                  </p>
+                </template>
+                <p v-else class="text-xs text-slate-400">
+                  Nenhum período
                 </p>
               </div>
             </li>
           </ul>
-        </template>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">
+            Coincidências de férias
+          </h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Pares de servidores com períodos sobrepostos no ciclo.
+          </p>
+
+          <p v-if="data.coincidences.length === 0" class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+            Nenhuma coincidência encontrada.
+          </p>
+
+          <template v-else>
+            <div class="mt-3 hidden lg:block print:block">
+              <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" class="px-3 py-2 font-semibold">Servidor A</th>
+                    <th scope="col" class="px-3 py-2 font-semibold">Servidor B</th>
+                    <th scope="col" class="px-3 py-2 font-semibold">Período sobreposto</th>
+                    <th scope="col" class="px-3 py-2 font-semibold">Dias</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="coincidence in data.coincidences" :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`">
+                    <td class="px-3 py-2">{{ coincidence.employeeA.name }}</td>
+                    <td class="px-3 py-2">{{ coincidence.employeeB.name }}</td>
+                    <td class="px-3 py-2">
+                      {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
+                    </td>
+                    <td class="px-3 py-2 font-medium">{{ coincidence.days }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ul class="mt-3 divide-y divide-slate-100 lg:hidden print:hidden">
+              <li
+                v-for="coincidence in data.coincidences"
+                :key="`${coincidence.employeeA.id}-${coincidence.employeeB.id}-${coincidence.startDate}`"
+                class="space-y-2 py-3"
+              >
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Servidor A
+                    </p>
+                    <p class="text-sm text-slate-900">
+                      {{ coincidence.employeeA.name }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Servidor B
+                    </p>
+                    <p class="text-sm text-slate-900">
+                      {{ coincidence.employeeB.name }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-sm text-slate-600">
+                    {{ formatDateRangeBR(coincidence.startDate, coincidence.endDate) }}
+                  </p>
+                  <p class="text-sm font-medium text-slate-900">
+                    {{ coincidence.days }} dias
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </template>
+        </div>
+      </div>
+
+      <div
+        v-show="activeTab === 'annual'"
+        id="report-panel-annual"
+        role="tabpanel"
+        aria-labelledby="report-tab-annual"
+        class="space-y-4"
+      >
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">
+            Visão anual
+          </h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Cada coluna é uma semana (segunda a domingo). A célula azul indica pelo menos um dia de férias na semana.
+          </p>
+        </div>
+
+        <AnnualVacationCalendar
+          :employees="calendarEmployees"
+          :cycle-start="data.settings.cycleStart"
+          :cycle-end="data.settings.cycleEnd"
+        />
+      </div>
+
+      <div
+        v-show="activeTab === 'monthly'"
+        id="report-panel-monthly"
+        role="tabpanel"
+        aria-labelledby="report-tab-monthly"
+        class="space-y-4"
+      >
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">
+            Calendário mensal
+          </h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Escolha o mês e o ano para ver quem está de férias em cada dia.
+          </p>
+        </div>
+
+        <MonthlyVacationCalendar
+          :employees="calendarEmployees"
+          :cycle-start="data.settings.cycleStart"
+          :cycle-end="data.settings.cycleEnd"
+          :initial-month="initialMonth"
+        />
       </div>
     </template>
   </section>
