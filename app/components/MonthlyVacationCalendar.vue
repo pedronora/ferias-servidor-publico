@@ -24,30 +24,23 @@ const MONTH_FORMATTER = new Intl.DateTimeFormat('pt-BR', { month: 'long' })
 const cycleMonths = computed(() => getCycleMonths(props.cycleStart, props.cycleEnd))
 const years = computed(() => getCycleYears(props.cycleStart, props.cycleEnd))
 const initial = cycleMonths.value.find(month =>
-  month.year === props.initialMonth.year && month.month === props.initialMonth.month,
-) ?? cycleMonths.value[0]
+  month.year === props.initialMonth.year && month.month === props.initialMonth.month) ?? cycleMonths.value[0]
 const selectedYear = ref(initial?.year ?? props.initialMonth.year)
 const selectedMonth = ref(initial?.month ?? props.initialMonth.month)
 
 const availableMonths = computed(() =>
-  cycleMonths.value.filter(month => month.year === selectedYear.value),
-)
+  cycleMonths.value.filter(month => month.year === selectedYear.value))
 const selectedMonthOption = computed(() =>
-  availableMonths.value.find(month => month.month === selectedMonth.value),
-)
+  availableMonths.value.find(month => month.month === selectedMonth.value))
 const selectedMonthLabel = computed(() =>
-  selectedMonthOption.value?.label ?? formatMonthLabel(selectedYear.value, selectedMonth.value),
-)
+  selectedMonthOption.value?.label ?? formatMonthLabel(selectedYear.value, selectedMonth.value))
 const currentIndex = computed(() => cycleMonths.value.findIndex(month =>
-  month.year === selectedYear.value && month.month === selectedMonth.value,
-))
+  month.year === selectedYear.value && month.month === selectedMonth.value))
 const canGoPrevious = computed(() => currentIndex.value > 0)
 const canGoNext = computed(() =>
-  currentIndex.value >= 0 && currentIndex.value < cycleMonths.value.length - 1,
-)
+  currentIndex.value >= 0 && currentIndex.value < cycleMonths.value.length - 1)
 const weeks = computed(() =>
-  buildMonthWeeks(selectedYear.value, selectedMonth.value, props.cycleStart, props.cycleEnd),
-)
+  buildMonthWeeks(selectedYear.value, selectedMonth.value, props.cycleStart, props.cycleEnd))
 const employeesByDate = computed(() => {
   const map = new Map<string, EmployeeSummary[]>()
 

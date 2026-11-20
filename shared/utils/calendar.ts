@@ -253,8 +253,7 @@ export function getEmployeesOnDate<T extends CalendarEmployee>(
   }
 
   return employees.filter(employee =>
-    employee.periods.some(period => periodCoversDate(period, date)),
-  )
+    employee.periods.some(period => periodCoversDate(period, date)))
 }
 
 export function getEmployeesInRange<T extends CalendarEmployee>(
@@ -281,8 +280,7 @@ export function getEmployeesInRange<T extends CalendarEmployee>(
   }
 
   return employees.filter(employee =>
-    employee.periods.some(period => periodOverlapsRange(period, from, to)),
-  )
+    employee.periods.some(period => periodOverlapsRange(period, from, to)))
 }
 
 export function countEmployeeDaysInRange(

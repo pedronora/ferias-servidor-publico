@@ -355,11 +355,9 @@ describe('AnnualVacationCalendar', () => {
     const cells = wrapper.findAll('td')
 
     const mariaCell = cells.find(cell =>
-      cell.attributes('aria-label') === 'Maria Souza — Semana de 04/01/2027 a 10/01/2027: 1 dia(s) de férias',
-    )
+      cell.attributes('aria-label') === 'Maria Souza — Semana de 04/01/2027 a 10/01/2027: 1 dia(s) de férias')
     const countCell = cells.find(cell =>
-      cell.attributes('aria-label') === 'Semana de 04/01/2027 a 10/01/2027: 2 pessoa(s) ausente(s)',
-    )
+      cell.attributes('aria-label') === 'Semana de 04/01/2027 a 10/01/2027: 2 pessoa(s) ausente(s)')
 
     expect(mariaCell?.classes()).toContain('bg-brand-600')
     expect(countCell?.text()).toBe('2')
@@ -399,8 +397,7 @@ describe('MonthlyVacationCalendar', () => {
       .toBe('Pessoas com férias no mês: 2')
 
     const dayCell = wrapper.findAll('td').find(cell =>
-      cell.attributes('aria-label') === '10/01/2027: Maria Souza, João Pereira',
-    )
+      cell.attributes('aria-label') === '10/01/2027: Maria Souza, João Pereira')
     expect(dayCell?.classes()).toContain('bg-brand-50')
   })
 
