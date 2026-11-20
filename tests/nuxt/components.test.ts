@@ -390,6 +390,10 @@ describe('MonthlyVacationCalendar', () => {
   it('mostra o mês inicial, os nomes e o total de pessoas', () => {
     const wrapper = mountCalendar()
 
+    expect(wrapper.get('table').classes()).toEqual(expect.arrayContaining([
+      'w-full',
+      'min-w-175',
+    ]))
     expect(wrapper.text()).toContain('Janeiro de 2027')
     expect(wrapper.text()).toContain('Maria Souza')
     expect(wrapper.text()).toContain('João Pereira')
